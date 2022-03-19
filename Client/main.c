@@ -21,7 +21,7 @@ extern int errno;
 int send_message(int fd, void *message_buffer, size_t message_length)
 {
     ssize_t bytes_written = 0;
-    char * buffer = (char*)message_buffer;
+    char *buffer = (char *)message_buffer;
     for (size_t total_bytes_written = 0; total_bytes_written < message_length; total_bytes_written += bytes_written)
     {
         size_t bytes_left = message_length - total_bytes_written;
@@ -35,7 +35,7 @@ int send_message(int fd, void *message_buffer, size_t message_length)
 ssize_t recv_message(int fd, void *message_buffer, size_t message_length)
 {
     size_t bytes_read;
-    char * buffer = (char*)message_buffer;
+    char *buffer = (char *)message_buffer;
     for (size_t total_bytes_read = 0; total_bytes_read < message_length; total_bytes_read += bytes_read)
     {
         size_t bytes_left = message_length - total_bytes_read;
@@ -51,32 +51,31 @@ ssize_t recv_message(int fd, void *message_buffer, size_t message_length)
 int main(void)
 {
     struct addrinfo *res;
-    struct addrinfo hints = {.ai_family = AF_INET, .ai_socktype = SOCK_STREAM};
+    struct addrinfo hints = {.ai_family = AF_INET, .ai_socktype = SOCK_DGRAM};
     int fd, errorcode;
     struct sockaddr addr;
     socklen_t addrlen;
     char buffer[128 + 1];
 
-    fd = socket(AF_INET, SOCK_STREAM, 0);
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
 
-    errorcode = getaddrinfo("tejo.tecnico.ulisboa.pt", "58001", &hints, &res);
+    errorcode = getaddrinfo("127.0.0.1", "58001", &hints, &res);
     if (errorcode != 0)
     {
         fprintf(stdout, "Error: getaddrinfo: %s\n", gai_strerror(errorcode));
         exit(EXIT_FAILURE);
     }
-    errorcode = connect(fd, res->ai_addr, res->ai_addrlen);
+    errorcode = sendto(fd,"Hallo!\n",7,0,res->ai_addr,res->ai_addrlen);
     if (errorcode == -1)
     {
         perror("Error: connect");
         exit(EXIT_FAILURE);
     }
-    strcpy(buffer, "Hello!\n");
-    size_t nbytes = strlen(buffer) + 1;
-    if (send_message(fd, buffer, nbytes) != 0)
-        exit(EXIT_FAILURE);
-    nbytes = recv_message(fd,buffer,nbytes);
-    buffer[nbytes] ='\0';
+    addrlen = sizeof(addr);
+    int n = recvfrom(fd, buffer, 128, 0, &addr, &addrlen);
+    if (n == -1) /*error*/
+        exit(1);
+    buffer[n] = '\0';
     printf("echo: %s\n", buffer);
     close(fd);
     freeaddrinfo(res);
