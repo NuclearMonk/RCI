@@ -11,7 +11,7 @@
 extern int errno;
 
 
-void receive_tcp_message(int fd)
+void receive_udp_message(int fd)
 {
     struct sockaddr addr;
     char buffer[129];
@@ -28,12 +28,17 @@ void receive_tcp_message(int fd)
 
 void read_console()
 {
+    FILE* file = fdopen(0,"r");
     char buffer[129];
-    int nread = read(0, buffer, 128);
-    if (nread == -1) /*error*/
-        exit(1);
-    buffer[nread] = '\0';
-    if(strcmp(buffer,"exit\n")==0)exit(0);
+    fscanf(file,"%s", &buffer);
+    printf("%s\n",buffer);
+    fclose(file);
+    // char buffer[129];
+    // int nread = read(0, buffer, 128);
+    // if (nread == -1) /*error*/
+    //     exit(1);
+    // buffer[nread] = '\0';
+    // if(strcmp(buffer,"exit\n")==0)exit(0);
 }
 
 int main(void)
@@ -57,6 +62,7 @@ int main(void)
         perror("Error: bind");
         exit(EXIT_FAILURE);
     }
+    freeaddrinfo(res);
     fd_set set, temp_set;
     FD_ZERO(&set);
     FD_SET(0,&set);
@@ -67,7 +73,7 @@ int main(void)
         int count = select(fd+1,&temp_set,NULL,NULL,NULL);
         while(count>0)
         {
-            if(FD_ISSET(fd,&temp_set))receive_tcp_message(fd);
+            if(FD_ISSET(fd,&temp_set))receive_udp_message(fd);
             if(FD_ISSET(0,&temp_set))read_console();
             count--;
         }
