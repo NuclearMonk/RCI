@@ -1,8 +1,9 @@
 #include "data.h"
+#include "client.h"
 #include <assert.h>
 #include <stdio.h>
 
-int data_tests()
+void data_tests()
 {
     data_t data = CREATE_DATA_STRUCT;
     STORE_KEY(data, 1);
