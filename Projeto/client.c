@@ -9,7 +9,7 @@ console_command_t *read_console_command(int fd)
 {
     char buffer[128] = "";
     char command_buffer[10] = "";
-    char buffer_ip[128] = "";
+    char buffer_ip[INET_ADDRSTRLEN] = "";
     char buffer_port[6]="";
     int argument;
     read(fd, &buffer, 128);

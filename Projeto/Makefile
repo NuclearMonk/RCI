@@ -34,4 +34,4 @@ node.o: node.c node.h
 
 .PHONY : clean
 clean:
-	rm -f *.o
+	rm -f *.o *.gch

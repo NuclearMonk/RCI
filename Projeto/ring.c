@@ -27,7 +27,7 @@ void run_ring()
                     server = create_server();
                     break;
                 case c_pentry:
-                    
+                    set_antecessor_node(server,create_node(command->argument,command->ip,command->port));
                     break;
                 case c_show:
                     show_server_info(server);

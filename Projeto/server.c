@@ -4,6 +4,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+int open_tcp_connection(int fd, node_t* target);
+
 server_t *create_server()
 {
     server_t *server = calloc(1, sizeof(server_t));
@@ -43,12 +45,35 @@ void show_server_info(server_t *server)
     printf("KEY: %d\n", server->self->key);
     printf("IP: %s\n", server->self->ip);
     printf("PORT: %s\n", server->self->port);
+    if(server->antecessor)
+    {
+    printf("Antecessor node:\n");
+    printf("KEY: %d\n", server->antecessor->key);
+    printf("IP: %s\n", server->antecessor->ip);
+    printf("PORT: %s\n", server->antecessor->port);   
+    }
     fflush(stdout);
 }
 
+void        set_antecessor_node(server_t* server, node_t* node)
+{
+    if(!server)return;
+    server->antecessor = node;
+    open_tcp_connection(server->socket_send,server->antecessor);
+    fflush(stdout);
+}
+
+
 int open_tcp_connection(int fd, node_t* target)
 {
+    if(!target)return -1;
     struct addrinfo *res;
     struct addrinfo hints = {.ai_family = AF_INET,.ai_socktype = SOCK_STREAM};
+    int errorcode;
+    errorcode = getaddrinfo(target->ip,target->port,&hints,&res);
+    if(errorcode != 0) return errorcode;
+    errorcode = connect(fd,res->ai_addr,res->ai_addrlen);
+    freeaddrinfo(res);
+    if(errorcode == -1)return -1;
     return 0;
 }
