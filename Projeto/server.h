@@ -15,5 +15,6 @@ typedef struct server
 
 server_t*   create_server();
 void        destroy_server(server_t* server);
-int         open_listen_socket(server_t* server);
-int         open_send_socket(server_t* server);
+
+void        show_server_info(server_t* server);
+int         open_tcp_connection(int socket, node_t* destination);

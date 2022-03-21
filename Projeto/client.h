@@ -7,8 +7,8 @@ typedef struct console_command
 {
    console_commands command;
    int argument;
-   in_addr_t ip;
-   int port;
+   char ip[INET_ADDRSTRLEN];
+   char port[6];
 }console_command_t;
 
 

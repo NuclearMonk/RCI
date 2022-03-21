@@ -3,46 +3,48 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <string.h>
 
 console_command_t *read_console_command(int fd)
 {
     char buffer[128] = "";
-    char command[10] = "";
+    char command_buffer[10] = "";
     char buffer_ip[128] = "";
-    int argument, port;
+    char buffer_port[6]="";
+    int argument;
     read(fd, &buffer, 128);
-    sscanf(buffer, "%128c", buffer2);
-    console_command_t *command = NULL;
-    switch (buffer2[0])
+    sscanf(buffer, "%10c", command_buffer);
+    console_command_t *command= malloc(sizeof(console_command_t));
+    if(!command)return NULL;    
+    switch (command_buffer[0])
     {
     case 'n':
-        command = malloc(sizeof(console_command_t));
-        if (!command)
-            break;
         command->command = c_new;
         break;
     case 'b':
-        command = malloc(sizeof(console_command_t));
-        if (!command)
-            break;
         command->command = c_bentry;
         break;
     case 'p':
-        if (sscanf(buffer, "%*s %d %15s %d", &argument, buffer_ip, &port) != 3)
-            break;
-        command = malloc(sizeof(console_command_t));
-        if (!command)
-            break;
+        if (sscanf(buffer, "%*s %d %15s %5s", &argument, buffer_ip, buffer_port) == 3){
         command->command = c_pentry;
         command->argument = argument;
-        inet_pton(AF_INET, buffer_ip, &(command->ip));
-        command->port = port;
-
+        strncpy((command->ip),buffer_ip,INET_ADDRSTRLEN);
+        strncpy((command->port),buffer_port,6);  
+        }
+        else{
+            free(command);
+            return NULL;
+        }
+        break;
+    case 's':
+        command->command = c_show;
         break;
     case 'e':
-        command = malloc(sizeof(console_command_t));
         command->command = c_exit;
+        break;
     default:
+        free(command);
+        return NULL;
         break;
     }
     return command;

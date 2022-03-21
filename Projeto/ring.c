@@ -27,7 +27,10 @@ void run_ring()
                     server = create_server();
                     break;
                 case c_pentry:
-                    printf("PENTRY %d %u %d", command->argument,ntohl(command->ip), command->port);
+                    
+                    break;
+                case c_show:
+                    show_server_info(server);
                     break;
                 case c_exit:
                     destroy_server(server);
