@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <string.h>
 
 int open_tcp_connection(int fd, node_t *target);
 void bind_tcp_socket(int fd, node_t *node);
@@ -13,7 +14,7 @@ server_t *create_server()
     server_t *server = calloc(1, sizeof(server_t));
     if (!server)
         return NULL;
-    server->self = create_node(0, "0.0.0.0", "8080");
+    server->self = create_node(0, "0.0.0.0", "0");
     server->socket_send = socket(AF_INET, SOCK_STREAM, 0);
     server->socket_listen = socket(AF_INET, SOCK_STREAM, 0);
     bind_tcp_socket(server->socket_listen, server->self);
@@ -90,9 +91,16 @@ void bind_tcp_socket(int fd, node_t *node)
 {
     struct addrinfo *res;
     struct addrinfo hints = {.ai_family = AF_INET, .ai_socktype = SOCK_STREAM, .ai_flags = AI_PASSIVE};
-    getaddrinfo(NULL, node->port, &hints, &res);
+    getaddrinfo("localhost", node->port, &hints, &res);
     bind(fd, res->ai_addr, res->ai_addrlen);
     listen(fd, 5);
+    struct sockaddr_in sin;
+    socklen_t len = sizeof(sin);
+    if(getsockname(fd,(struct sockaddr *)&sin,&len)!=-1)
+    {
+        memcpy(node->ip,inet_ntoa(sin.sin_addr),INET_ADDRSTRLEN);
+        snprintf(node->port,6,"%d",sin.sin_port);
+    }
 }
 
 void read_message(int fd)
