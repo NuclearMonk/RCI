@@ -5,7 +5,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 
-void run_ring()
+void run_ring(int key, char*ip ,char* port)
 {
     struct sigaction act = {.sa_handler = SIG_IGN};
     if (sigaction(SIGPIPE, &act, NULL) == -1) /*error*/
@@ -13,7 +13,7 @@ void run_ring()
     fd_set set, temp_set;
 
     console_command_t *command;
-    server_t *server = create_server();
+    server_t *server = create_server(key,ip,port);
     FD_ZERO(&set);
     FD_SET(0, &set);
     FD_SET(server->socket_listen, &set);
@@ -60,8 +60,10 @@ void run_ring()
     }
 }
 
-int main(void)
+int main(int argc , char* argv[])
 {
-    run_ring();
+    if(argc != 4) return -1;
+    int key = atoi(argv[1]);
+    run_ring(key,argv[2],argv[3]);
     return 0;
 }

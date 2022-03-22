@@ -13,7 +13,7 @@ typedef struct server
     int socket_send;
 }server_t;
 
-server_t*   create_server();
+server_t*   create_server(int key, char* ip, char* port);
 void        destroy_server(server_t* server);
 
 void        set_antecessor_node(server_t* server, node_t* node);
