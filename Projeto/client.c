@@ -10,12 +10,13 @@ console_command_t *read_console_command(int fd)
     char buffer[128] = "";
     char command_buffer[10] = "";
     char buffer_ip[INET_ADDRSTRLEN] = "";
-    char buffer_port[6]="";
+    char buffer_port[6] = "";
     int argument;
-    read(fd, &buffer, 128);
+    if(read(fd, &buffer, 128)==-1)return NULL;
     sscanf(buffer, "%10c", command_buffer);
-    console_command_t *command= malloc(sizeof(console_command_t));
-    if(!command)return NULL;    
+    console_command_t *command = malloc(sizeof(console_command_t));
+    if (!command)
+        return NULL;
     switch (command_buffer[0])
     {
     case 'n':
@@ -25,13 +26,22 @@ console_command_t *read_console_command(int fd)
         command->command = c_bentry;
         break;
     case 'p':
-        if (sscanf(buffer, "%*s %d %15s %5s", &argument, buffer_ip, buffer_port) == 3){
-        command->command = c_pentry;
-        command->argument = argument;
-        strncpy((command->ip),buffer_ip,INET_ADDRSTRLEN);
-        strncpy((command->port),buffer_port,6);  
+        if (sscanf(buffer, "%*s %d %15s %5s", &argument, buffer_ip, buffer_port) == 3)
+        {
+            in_addr_t ip;
+            if(inet_pton(AF_INET,buffer_ip,&ip)!=1)
+            {
+
+                free(command);
+                return NULL;
+            }
+            command->command = c_pentry;
+            command->argument = argument;
+            strncpy((command->ip), buffer_ip, INET_ADDRSTRLEN);
+            strncpy((command->port), buffer_port, 6);
         }
-        else{
+        else
+        {
             free(command);
             return NULL;
         }
