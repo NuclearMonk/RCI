@@ -89,17 +89,32 @@ int open_tcp_connection(int fd, node_t *target)
 
 void bind_tcp_socket(int fd, node_t *node)
 {
-    struct addrinfo *res;
+    struct addrinfo *res, *p;
     struct addrinfo hints = {.ai_family = AF_INET, .ai_socktype = SOCK_STREAM, .ai_flags = AI_PASSIVE};
-    getaddrinfo("localhost", node->port, &hints, &res);
+    struct in_addr *addr;
+    char name_buffer[256];
+    gethostname(name_buffer, 256);
+
+    getaddrinfo(name_buffer, node->port, &hints, &res);
+
+    printf("canonical hostname: %s\n", res->ai_canonname);
+    for (p = res; p != NULL; p = p->ai_next)
+    {
+        addr = &((struct sockaddr_in *)p->ai_addr)->sin_addr;
+        printf("internet address: %s (%08lX)\n",
+               inet_ntop(p->ai_family, addr, name_buffer,256),
+               (long unsigned int)ntohl(addr->s_addr));
+    }
+    fflush(stdout);
+    freeaddrinfo(res);
     bind(fd, res->ai_addr, res->ai_addrlen);
     listen(fd, 5);
     struct sockaddr_in sin;
     socklen_t len = sizeof(sin);
-    if(getsockname(fd,(struct sockaddr *)&sin,&len)!=-1)
+    if (getsockname(fd, (struct sockaddr *)&sin, &len) != -1)
     {
-        memcpy(node->ip,inet_ntoa(sin.sin_addr),INET_ADDRSTRLEN);
-        snprintf(node->port,6,"%d",sin.sin_port);
+        memcpy(node->ip, inet_ntoa(sin.sin_addr), INET_ADDRSTRLEN);
+        snprintf(node->port, 6, "%d", sin.sin_port);
     }
 }
 
@@ -108,11 +123,13 @@ void read_message(int fd)
     struct sockaddr addr;
     socklen_t addrlen = sizeof(addr);
     int newfd;
-    if((newfd= accept(fd,&addr,&addrlen))==-1)return;
-    char buffer[128]= "";
-    if(read(newfd, &buffer, 128)==-1)return;
-    printf("%s",buffer);
+    if ((newfd = accept(fd, &addr, &addrlen)) == -1)
+        return;
+    char buffer[128] = "";
+    if (read(newfd, &buffer, 128) == -1)
+        return;
+    printf("%s", buffer);
     fflush(stdout);
-    shutdown(newfd,SHUT_RDWR);
+    shutdown(newfd, SHUT_RDWR);
     close(newfd);
 }

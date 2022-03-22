@@ -5,7 +5,7 @@ typedef struct node
 {
     int key;                        /* chave do node */
     char ip[INET_ADDRSTRLEN];       /* ip do node */
-    char port [6];                  /* porta */
+    char port[6];                  /* porta */
 }node_t;
 
 
