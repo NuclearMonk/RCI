@@ -1,3 +1,5 @@
+#ifndef CLIENT_H
+#define CLIENT_H
 #include <stdio.h>
 #include <arpa/inet.h>
 
@@ -13,3 +15,7 @@ typedef struct console_command
 
 
 console_command_t* read_console_command(int fd);
+
+int is_string_valid_ip(const char*);
+
+#endif

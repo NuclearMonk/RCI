@@ -28,10 +28,7 @@ console_command_t *read_console_command(int fd)
     case 'p':
         if (sscanf(buffer, "%*s %d %15s %5s", &argument, buffer_ip, buffer_port) == 3)
         {
-            in_addr_t ip;
-            if(inet_pton(AF_INET,buffer_ip,&ip)!=1)
-            {
-
+            if(is_string_valid_ip(buffer_ip)){
                 free(command);
                 return NULL;
             }
@@ -58,4 +55,14 @@ console_command_t *read_console_command(int fd)
         break;
     }
     return command;
+}
+
+int is_string_valid_ip(const char* candidate)
+{
+            in_addr_t ip;
+            if(inet_pton(AF_INET,candidate,&ip)!=1)
+            {
+                return 0;
+            }
+            return 1;
 }

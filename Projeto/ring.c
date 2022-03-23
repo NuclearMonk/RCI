@@ -4,12 +4,13 @@
 #include "server.h"
 #include <arpa/inet.h>
 #include <signal.h>
+#include "client.h"
 
 void run_ring(int key, char*ip ,char* port)
 {
     struct sigaction act = {.sa_handler = SIG_IGN};
-    if (sigaction(SIGPIPE, &act, NULL) == -1) /*error*/
-        exit(1);
+    if (sigaction(SIGPIPE, &act, NULL) == -1)exit(1);
+    if (!is_string_valid_ip(ip))exit(1);
     fd_set set, temp_set;
 
     console_command_t *command;

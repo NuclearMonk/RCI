@@ -6,8 +6,8 @@
 #include <unistd.h>
 #include <string.h>
 
-int open_tcp_connection(int fd, node_t *target);
-void bind_tcp_socket(int fd, node_t *node);
+int open_tcp_connection(int fd,const node_t *target);
+void bind_tcp_socket(int fd,const node_t *node);
 
 server_t *create_server(int key, char* ip, char* port)
 {
@@ -33,7 +33,7 @@ void destroy_server(server_t *server)
     free(server);
 }
 
-void show_server_info(server_t *server)
+void show_server_info(const server_t *server)
 {
     if (!server)
     {
@@ -61,7 +61,7 @@ void show_server_info(server_t *server)
     fflush(stdout);
 }
 
-void set_antecessor_node(server_t *server, node_t *node)
+void set_antecessor_node(server_t *server,node_t *node)
 {
     if (!server)
         return;
@@ -70,7 +70,7 @@ void set_antecessor_node(server_t *server, node_t *node)
     fflush(stdout);
 }
 
-int open_tcp_connection(int fd, node_t *target)
+int open_tcp_connection(int fd, const node_t *target)
 {
     if (!target)
         return -1;
@@ -87,7 +87,7 @@ int open_tcp_connection(int fd, node_t *target)
     return 0;
 }
 
-void bind_tcp_socket(int fd, node_t *node)
+void bind_tcp_socket(int fd,const node_t *node)
 {
     struct addrinfo *res;
     struct addrinfo hints = {.ai_family = AF_INET, .ai_socktype = SOCK_STREAM, .ai_flags = AI_PASSIVE};

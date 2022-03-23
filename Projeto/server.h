@@ -18,6 +18,6 @@ void        destroy_server(server_t* server);
 
 void        set_antecessor_node(server_t* server, node_t* node);
 
-void        show_server_info(server_t* server);
+void        show_server_info(const server_t* server);
 
 void        read_message(int fd);
