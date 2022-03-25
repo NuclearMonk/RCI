@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 #include "client.h"
+
 void run_ring(int key, char *ip, char *port)
 {
     struct sigaction act = {.sa_handler = SIG_IGN};
