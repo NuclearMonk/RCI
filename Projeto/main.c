@@ -5,16 +5,17 @@
 #include <arpa/inet.h>
 #include <signal.h>
 #include "client.h"
-
-void run_ring(int key, char*ip ,char* port)
+void run_ring(int key, char *ip, char *port)
 {
     struct sigaction act = {.sa_handler = SIG_IGN};
-    if (sigaction(SIGPIPE, &act, NULL) == -1)exit(1);
-    if (!is_string_valid_ip(ip))exit(1);
+    if (sigaction(SIGPIPE, &act, NULL) == -1)
+        exit(1);
+    if (!is_string_valid_ip(ip))
+        exit(1);
     fd_set set, temp_set;
 
     console_command_t *command;
-    node_t *node = create_server(key,ip,port);
+    node_t *node = create_node(key, ip, port);
     FD_ZERO(&set);
     FD_SET(0, &set);
     FD_SET(node->socket_listen_tcp, &set);
@@ -22,7 +23,7 @@ void run_ring(int key, char*ip ,char* port)
     while (1)
     {
         temp_set = set;
-        int count = select(node->socket_listen_tcp+1, &temp_set, NULL, NULL, NULL);
+        int count = select(node->socket_listen_tcp + 1, &temp_set, NULL, NULL, NULL);
         while (count > 0)
         {
             if (FD_ISSET(0, &temp_set))
@@ -43,7 +44,7 @@ void run_ring(int key, char*ip ,char* port)
                         show_node_info(node);
                         break;
                     case c_exit:
-                        destroy_server(node);
+                        destroy_node(node);
                         free(command);
                         return;
                         break;
@@ -55,17 +56,18 @@ void run_ring(int key, char*ip ,char* port)
             }
             if (FD_ISSET(node->socket_listen_tcp, &temp_set))
             {
-                read_message(node->socket_listen_tcp);
+                read_tcp_message(node->socket_listen_tcp);
             }
             count--;
         }
     }
 }
 
-int main(int argc , char* argv[])
+int main(int argc, char *argv[])
 {
-    if(argc != 4) return -1;
+    if (argc != 4)
+        return -1;
     int key = atoi(argv[1]);
-    run_ring(key,argv[2],argv[3]);
+    run_ring(key, argv[2], argv[3]);
     return 0;
 }

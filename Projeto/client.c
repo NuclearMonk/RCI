@@ -7,35 +7,43 @@
 
 console_command_t *read_console_command(int fd)
 {
-    char buffer[128] = "";
-    char command_buffer[10] = "";
-    char buffer_ip[INET_ADDRSTRLEN] = "";
-    char buffer_port[6] = "";
-    int argument;
-    if(read(fd, &buffer, 128)==-1)return NULL;
-    sscanf(buffer, "%10c", command_buffer);
+    char buffer[128] = "";                /* buffer to  read the command from the console */
+    char command_character;               /* place to sore the first letter of the console inout */
+    char buffer_ip[INET_ADDRSTRLEN] = ""; /* buffer where i.IP is read to as a char array */
+    char buffer_port[6] = "";             /* buffer where i.PORT is read to as a char array */
+    int argument;                         /* buffer to where the generic command argument is read to */
+
+    if (read(fd, &buffer, 128) == -1)
+        return NULL; /* if the reading of the stdin fails  */
+    if (sscanf(buffer, "%1c", &command_character) != 1)
+        return NULL; /* or the command isn't a valid character */
+
     console_command_t *command = malloc(sizeof(console_command_t));
     if (!command)
-        return NULL;
-    switch (command_buffer[0])
+        return NULL; /* allocation fail */
+
+    switch (command_character)
     {
-    case 'n':
+    case 'n': /* create a new empty ring, no extra arguments */
         command->command = c_new;
         break;
-    case 'b':
+    case 'b': /* bentry command NOT IMPLEMENTED */
         command->command = c_bentry;
         break;
-    case 'p':
+    case 'p': /* Predecessor entry, "key ip port" format */
         if (sscanf(buffer, "%*s %d %15s %5s", &argument, buffer_ip, buffer_port) == 3)
         {
-            if(!is_string_valid_ip(buffer_ip)){
+            if (!is_string_valid_ip(buffer_ip))
+            {
+
                 free(command);
                 return NULL;
             }
+
             command->command = c_pentry;
             command->argument = argument;
-            strncpy((command->ip), buffer_ip, INET_ADDRSTRLEN);
-            strncpy((command->port), buffer_port, 6);
+            memcpy((command->ip), buffer_ip, INET_ADDRSTRLEN);
+            memcpy((command->port), buffer_port, 6);
         }
         else
         {
@@ -43,10 +51,10 @@ console_command_t *read_console_command(int fd)
             return NULL;
         }
         break;
-    case 's':
+    case 's': /* Show node info, no arguments needed */
         command->command = c_show;
         break;
-    case 'e':
+    case 'e': /* exit, no arguments needed */
         command->command = c_exit;
         break;
     default:
@@ -57,12 +65,10 @@ console_command_t *read_console_command(int fd)
     return command;
 }
 
-int is_string_valid_ip(const char* candidate)
+bool is_string_valid_ip(const char *candidate)
 {
-            in_addr_t ip;
-            if(inet_pton(AF_INET,candidate,&ip)!=1)
-            {
-                return 0;
-            }
-            return 1;
+    in_addr_t ip;
+    if (inet_pton(AF_INET, candidate, &ip) == 1)
+        return true;
+    return true;
 }

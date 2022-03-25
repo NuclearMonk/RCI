@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-node_data_t *create_node_data(int key, char ip[INET_ADDRSTRLEN], char port[6])
+node_data_t *create_node_data(int key, const char ip[INET_ADDRSTRLEN], const char port[6])
 {
     node_data_t *node = malloc(sizeof(node_data_t));
     node->key = key;

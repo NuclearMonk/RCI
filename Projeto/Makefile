@@ -5,9 +5,8 @@ ofiles = client.o  ring.o node_data.o main.o
 
 
 ring: ${ofiles}
-	${CC} ${flags} -o ring ${ofiles} ;
+	${CC} ${flags} -o ring ${ofiles};
 	make clean;
-
 main.o: main.c
 	${CC} -c  ${flags} main.c
 
