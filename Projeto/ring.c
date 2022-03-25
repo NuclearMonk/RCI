@@ -1,70 +1,142 @@
-#include "client.h"
+#include "ring.h"
 #include <stdlib.h>
-#include "sys/select.h"
-#include "server.h"
+#include <stdio.h>
 #include <arpa/inet.h>
-#include <signal.h>
-#include "client.h"
+#include <netdb.h>
+#include <unistd.h>
+#include <string.h>
 
-void run_ring(int key, char*ip ,char* port)
+int open_tcp_connection( const node_data_t *target);
+
+void bind_tcp_socket(int fd, const node_data_t *node);
+
+node_t *create_server(int key, char *ip, char *port)
 {
-    struct sigaction act = {.sa_handler = SIG_IGN};
-    if (sigaction(SIGPIPE, &act, NULL) == -1)exit(1);
-    if (!is_string_valid_ip(ip))exit(1);
-    fd_set set, temp_set;
-
-    console_command_t *command;
-    server_t *server = create_server(key,ip,port);
-    FD_ZERO(&set);
-    FD_SET(0, &set);
-    FD_SET(server->socket_listen, &set);
-
-    while (1)
-    {
-        temp_set = set;
-        int count = select(server->socket_listen+1, &temp_set, NULL, NULL, NULL);
-        while (count > 0)
-        {
-            if (FD_ISSET(0, &temp_set))
-            {
-                command = read_console_command(0);
-                if (command)
-                {
-
-                    switch (command->command)
-                    {
-                    case c_new:
-                        break;
-                    case c_pentry:
-                        set_antecessor_node(server, create_node(command->argument, command->ip, command->port));
-                        break;
-                    case c_show:
-                        show_server_info(server);
-                        break;
-                    case c_exit:
-                        destroy_server(server);
-                        free(command);
-                        return;
-                        break;
-                    default:
-                        break;
-                    }
-                    free(command);
-                }
-            }
-            if (FD_ISSET(server->socket_listen, &temp_set))
-            {
-                read_message(server->socket_listen);
-            }
-            count--;
-        }
-    }
+    node_t *node = calloc(1, sizeof(node_t));
+    if (!node)
+        return NULL;
+    node->self = create_node_data(key, ip, port);
+    node->socket_listen_tcp = socket(AF_INET, SOCK_STREAM, 0);
+    bind_tcp_socket(node->socket_listen_tcp, node->self);
+    return node;
 }
 
-int main(int argc , char* argv[])
+void destroy_server(node_t *node)
 {
-    if(argc != 4) return -1;
-    int key = atoi(argv[1]);
-    run_ring(key,argv[2],argv[3]);
-    return 0;
+
+    if (!node)
+        return;
+    destroy_node_data(node->self);
+    destroy_node_data(node->successor);
+    destroy_node_data(node->antecessor);
+    destroy_node_data(node->bridge);
+    free(node);
+}
+
+void create_empty_ring(node_t* node)
+{
+    set_sucessor_node(node,create_node_data(node->self->key,node->self->ip,node->self->port));
+    set_antecessor_node(node,create_node_data(node->self->key,node->self->ip,node->self->port));
+}
+
+void show_node_info(const node_t *node)
+{
+    if (!node)
+    {
+        printf("NO RING ON THIS NODE\n");
+        fflush(stdout);
+        return;
+    }
+    if (!(node->self))
+    {
+        printf("NO RING ON THIS NODE\n");
+        fflush(stdout);
+        return;
+    }
+    printf("This node:\n");
+    printf("KEY: %d\n", node->self->key);
+    printf("IP: %s\n", node->self->ip);
+    printf("PORT: %s\n", node->self->port);
+    if (node->antecessor)
+    {
+        printf("Antecessor node:\n");
+        printf("KEY: %d\n", node->antecessor->key);
+        printf("IP: %s\n", node->antecessor->ip);
+        printf("PORT: %s\n", node->antecessor->port);
+    }
+    if (node->successor)
+    {
+        printf("Sucessor node:\n");
+        printf("KEY: %d\n", node->successor->key);
+        printf("IP: %s\n", node->successor->ip);
+        printf("PORT: %s\n", node->successor->port);
+    }
+    fflush(stdout);
+}
+
+void set_sucessor_node(node_t *node, node_data_t *sucessor_node)
+{
+    if (!node)
+        return;
+    node->successor = sucessor_node;
+    send_message("HELLO WORLD!\n", node->successor);
+}
+
+void set_antecessor_node(node_t *node, node_data_t *antecessor_node)
+{
+    if (!node)
+        return;
+    node->antecessor = antecessor_node;
+}
+
+int open_tcp_connection( const node_data_t *target)
+{
+    if (!target)return -1;
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    struct addrinfo *res;
+    struct addrinfo hints = {.ai_family = AF_INET, .ai_socktype = SOCK_STREAM};
+    int errorcode;
+    errorcode = getaddrinfo(target->ip, target->port, &hints, &res);
+    if (errorcode != 0)
+        return errorcode;
+    errorcode = connect(fd, res->ai_addr, res->ai_addrlen);
+    freeaddrinfo(res);
+    if (errorcode == -1)
+        return -1;
+    return fd;
+}
+
+void bind_tcp_socket(int fd, const node_data_t *node)
+{
+    struct addrinfo *res;
+    struct addrinfo hints = {.ai_family = AF_INET, .ai_socktype = SOCK_STREAM, .ai_flags = AI_PASSIVE};
+    getaddrinfo(node->ip, node->port, &hints, &res);
+    bind(fd, res->ai_addr, res->ai_addrlen);
+    listen(fd, 5);
+    freeaddrinfo(res);
+}
+
+void read_message(int fd)
+{
+    struct sockaddr addr;
+    socklen_t addrlen = sizeof(addr);
+    char buffer[128] = "";
+    int newfd;
+    if ((newfd = accept(fd, &addr, &addrlen)) == -1)
+        return;
+    if (read(newfd, &buffer, 128) == -1)
+        return;
+    printf("%s", buffer);
+    shutdown(newfd, SHUT_RDWR);
+    close(newfd);
+}
+
+void        send_message(char* message, node_data_t* destination)
+{
+    int fd = open_tcp_connection(destination);
+    int length  = strlen(message) +1;
+    int errorcode = write(fd,message,length);
+    if(errorcode == -1)printf("erro");
+    shutdown(fd, SHUT_RDWR);
+    close(fd);
 }

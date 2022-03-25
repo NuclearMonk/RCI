@@ -28,7 +28,7 @@ console_command_t *read_console_command(int fd)
     case 'p':
         if (sscanf(buffer, "%*s %d %15s %5s", &argument, buffer_ip, buffer_port) == 3)
         {
-            if(is_string_valid_ip(buffer_ip)){
+            if(!is_string_valid_ip(buffer_ip)){
                 free(command);
                 return NULL;
             }

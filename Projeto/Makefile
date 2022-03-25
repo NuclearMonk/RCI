@@ -1,15 +1,15 @@
 CC = gcc
 flags = -std=gnu99 -g -O3 -Wall -Wextra -Werror=pedantic -Werror=format=2 -pedantic-errors -Wno-unknown-pragmas
 hfiles = data.h
-ofiles = client.o  server.o node.o ring.o
+ofiles = client.o  ring.o node_data.o main.o
 
 
 ring: ${ofiles}
 	${CC} ${flags} -o ring ${ofiles} ;
 	make clean;
 
-ring.o: ring.c
-	${CC} -c  ${flags} ring.c
+main.o: main.c
+	${CC} -c  ${flags} main.c
 
 tests: tests.o ${ofiles}
 	rm -f tests
@@ -24,11 +24,11 @@ tests.o: tests.c
 client.o: client.c client.h
 	${CC} -c  ${flags} client.c client.h
 
-server.o: server.c server.h
-	${CC} -c  ${flags} server.c server.h
+ring.o: ring.c ring.h
+	${CC} -c  ${flags} ring.c ring.h
 
-node.o: node.c node.h
-	${CC} -c  ${flags} node.c node.h
+node_data.o: node_data.c node_data.h
+	${CC} -c  ${flags} node_data.c node_data.h
 
 
 
