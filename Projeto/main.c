@@ -10,13 +10,19 @@ void run_ring(int key, char *ip, char *port)
 {
     struct sigaction act = {.sa_handler = SIG_IGN};
     if (sigaction(SIGPIPE, &act, NULL) == -1)
-        exit(1);
+        exit(-1);
     if (!is_string_valid_ip(ip))
-        exit(1);
+        exit(-1);
     fd_set set, temp_set;
 
     console_command_t *command;
     node_t *node = create_node(key, ip, port);
+    if(!node)
+    {
+        fprintf(stdout,"The specified port could not be used\nPlease run again with different parameters\n");
+        fflush(stdout);
+        exit(-1);
+    }
     FD_ZERO(&set);
     FD_SET(0, &set);
     FD_SET(node->socket_listen_tcp, &set);
@@ -39,7 +45,7 @@ void run_ring(int key, char *ip, char *port)
                         create_empty_ring(node);
                         break;
                     case c_pentry:
-                        set_sucessor_node(node, create_node_data(command->argument, command->ip, command->port));
+                        set_antecessor_node(node, create_node_data(command->argument, command->ip, command->port));
                         break;
                     case c_show:
                         show_node_info(node);
@@ -57,7 +63,13 @@ void run_ring(int key, char *ip, char *port)
             }
             if (FD_ISSET(node->socket_listen_tcp, &temp_set))
             {
-                read_tcp_message(node->socket_listen_tcp);
+                char* message = read_tcp_message(node->socket_listen_tcp);
+                if(message)
+                {
+                    fprintf(stdout,"MESSAGE RECEIVED:%s",message);
+                    fflush(stdout);
+                }
+
             }
             count--;
         }
