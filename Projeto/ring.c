@@ -8,7 +8,7 @@
 
 int open_tcp_connection(const node_data_t *target);
 
-void bind_tcp_socket(int fd, const node_data_t *node);
+int bind_tcp_socket(int fd, const node_data_t *node);
 
 node_t *create_node(int key, const char *ip, const char *port)
 {
@@ -17,7 +17,9 @@ node_t *create_node(int key, const char *ip, const char *port)
         return NULL;
     node->self = create_node_data(key, ip, port);
     node->socket_listen_tcp = socket(AF_INET, SOCK_STREAM, 0);
-    bind_tcp_socket(node->socket_listen_tcp, node->self);
+    int errorcode = bind_tcp_socket(node->socket_listen_tcp, node->self);
+    if (errorcode == -1)
+        return NULL;
     return node;
 }
 
@@ -79,7 +81,6 @@ void set_sucessor_node(node_t *node, node_data_t *sucessor_node)
     if (!node)
         return;
     node->sucessor = sucessor_node;
-    send_tcp_message("HELLO WORLD!\n", node->sucessor);
 }
 
 void set_antecessor_node(node_t *node, node_data_t *antecessor_node)
@@ -87,6 +88,7 @@ void set_antecessor_node(node_t *node, node_data_t *antecessor_node)
     if (!node)
         return;
     node->antecessor = antecessor_node;
+    send_tcp_message("HELLO WORLD!\n", node->antecessor);
 }
 
 int open_tcp_connection(const node_data_t *target)
@@ -107,41 +109,55 @@ int open_tcp_connection(const node_data_t *target)
     return fd;
 }
 
-void bind_tcp_socket(int fd, const node_data_t *node)
+int bind_tcp_socket(int fd, const node_data_t *node)
 {
     struct addrinfo *res;
     struct addrinfo hints = {.ai_family = AF_INET, .ai_socktype = SOCK_STREAM, .ai_flags = AI_PASSIVE};
-    getaddrinfo(node->ip, node->port, &hints, &res);
-    bind(fd, res->ai_addr, res->ai_addrlen);
-    listen(fd, 5);
+    int errorcode = getaddrinfo(node->ip, node->port, &hints, &res);
+    if (errorcode != 0)
+    {
+        freeaddrinfo(res);
+        return -1;
+    }
+    errorcode = bind(fd, res->ai_addr, res->ai_addrlen);
     freeaddrinfo(res);
+    if (errorcode == -1)
+        return -1;
+    return listen(fd, 5);
 }
 
-void read_tcp_message(int fd)
+char* read_tcp_message(int fd)
 {
     struct sockaddr addr;
     socklen_t addrlen = sizeof(addr);
     char buffer[128] = "";
-    int newfd;
+    int newfd,nread;
     if ((newfd = accept(fd, &addr, &addrlen)) == -1)
-        return;
-    if (read(newfd, &buffer, 128) == -1)
-        return;
-    printf("\033[0;31m"); 
-    printf("%s", buffer);
-    printf("\033[0m"); 
-    fflush(stdout);
+        return NULL;
+    if ((nread = read(newfd, &buffer, 128)) == -1)
+        return NULL;
+    buffer[nread] ='\0';
+    char* message = malloc((strlen(buffer)+1)*sizeof(char));
+    if(!message)return NULL;
+    strcpy(message,buffer);
+    // printf("\033[0;31m");
+    // printf("%s", buffer);
+    // printf("\033[0m");
+    // fflush(stdout);
+    
     shutdown(newfd, SHUT_RDWR);
     close(newfd);
+    return message;
 }
 
-void send_tcp_message(const char *message, node_data_t *destination)
+int send_tcp_message(const char *message, node_data_t *destination)
 {
     int fd = open_tcp_connection(destination);
+    if (fd < 0)
+        return -1;
     int length = strlen(message) + 1;
     int errorcode = write(fd, message, length);
-    if (errorcode == -1)
-        printf("erro");
     shutdown(fd, SHUT_RDWR);
     close(fd);
+    return errorcode;
 }
