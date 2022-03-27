@@ -13,11 +13,9 @@ int bind_tcp_socket(int fd, const node_data_t *node);
 
 void leave_ring(node_t *node)
 {
-    char buffer[128];
     if (NULL != node->antecessor && NULL != node->sucessor && node->sucessor->key != node->self->key && node->antecessor->key != node->self->key)
     {
-        sprintf(buffer, "PRED %d %15s %5s", node->antecessor->key, node->antecessor->ip, node->antecessor->port);
-        send_tcp_message(buffer, node->self, node->sucessor);
+        send_tcp_message((create_message(PRED, node->antecessor->key, node->antecessor->ip, node->antecessor->port)), node->self, node->sucessor);
     }
 }
 
@@ -119,17 +117,15 @@ void set_antecessor_node(node_t *node, node_data_t *antecessor_node)
         return;
     if (node->antecessor) /* if we have an antecessor */
     {
-        destroy_node_data(node->antecessor); /* we make sure we don't leak memory by destroying the existing antecessor */
         if (antecessor_node->key == node->self->key) /* if our antecessor is ourselves then we must also change our sucessor, as it will also be ourselves */
         {
             set_sucessor_node(node, create_node_data(antecessor_node->key, antecessor_node->ip, antecessor_node->port));
         }
+        destroy_node_data(node->antecessor); /* we make sure we don't leak memory by destroying the existing antecessor */
     }
 
     node->antecessor = antecessor_node;
-    char buffer[128];
-    sprintf(buffer, "SELF %d %15s %5s", node->self->key, node->self->ip, node->self->port);
-    send_tcp_message(buffer, node->self, node->antecessor);
+    send_tcp_message(create_message(SELF, node->self->key, node->self->ip, node->self->port), node->self, node->antecessor);
 }
 
 int open_tcp_connection(const node_data_t *target)
@@ -182,89 +178,76 @@ char *read_tcp_message(int fd)
     if (!message)
         return NULL;
     strcpy(message, buffer);
-    // printf("\033[0;31m");
-    // printf("%s", buffer);
-    // printf("\033[0m");
-    // fflush(stdout);
+    printf("\033[0;31m");
+    printf("MENSAGEM RECEBIDA\n%s\n", buffer);
+    printf("\033[0m");
+    fflush(stdout);
 
     shutdown(newfd, SHUT_RDWR);
     close(newfd);
     return message;
 }
 
-int send_tcp_message(const char *message, const node_data_t *self, node_data_t *destination)
+int send_tcp_message(message_t *message, const node_data_t *self, node_data_t *destination)
 {
-
-    if (!destination)
+    if (!message)
         return -1;
+    if (!destination)
+    {
+        free(message);
+        return -1;
+    }
     if (self->key == destination->key)
+    {
+        free(message);
         return 0;
+    }
 
-    /* Debug Prints */
-    printf("\033[0;32m");
-    printf("MENSAGEM ENVIADA\nDestino:%d\nContent:%s\n\n", destination->key, message);
-    printf("\033[0m");
-    fflush(stdout);
     /* end of debug prints */
 
     int fd = open_tcp_connection(destination);
     if (fd < 0)
+    {
+        printf("TESTE\n");
+        free(message);
+        fflush(stdout);
         return -1;
-    int length = strlen(message) + 1;
-    int errorcode = write(fd, message, length);
+
+    }
+    char *message_string = message_to_string(message);
+    free(message);
+    /* Debug Prints */
+    printf("\033[0;32m");
+    printf("MENSAGEM ENVIADA\nDestino:%d\nContent:%s\n\n", destination->key, message_string);
+    printf("\033[0m");
+    fflush(stdout);
+    int length = strlen(message_string) + 1;
+    int errorcode = write(fd, message_string, length);
     shutdown(fd, SHUT_RDWR);
     close(fd);
+    free(message_string);
     return errorcode;
 }
 
-void handle_message(const char *message, node_t *node)
+void handle_message(const message_t *message, node_t *node)
 {
-    printf("\033[0;31m");
-    printf("MENSAGEM RECEBIDA:%s\n", message);
-    printf("\033[0m");
-    fflush(stdout);
-    char header_buffer[6] = "";
-    char buffer_ip[INET_ADDRSTRLEN] = "";
-    char buffer_port[6] = "";
-    char buffer[128];
-    int argument_buffer;
-
-    if (sscanf(message, "%5s", header_buffer) == 1)
+    switch (message->header)
     {
-        if (strcmp(header_buffer, "SELF") == 0)
+    case SELF:
+        if (node->sucessor)
         {
-            if (sscanf(message, "%*s %d %15s %5s", &argument_buffer, buffer_ip, buffer_port) == 3)
+            if (message->i_key == node->sucessor->key)
             {
-                if (!is_string_valid_ip(buffer_ip))
-                    return;
-                if (!is_string_valid_port(buffer_port))
-                    return;
-
-                // if the sucessor node is already the current one we don't need to change anything
-                if (node->sucessor)
-                {
-                    if (argument_buffer == node->sucessor->key)
-                    {
-                        return;
-                    }
-                }
-
-                // operation to insert the new node in the ring
-                sprintf(buffer, "PRED %d %15s %5s", argument_buffer, buffer_ip, buffer_port);
-                send_tcp_message(buffer, node->self, node->sucessor);
-                set_sucessor_node(node, create_node_data(argument_buffer, buffer_ip, buffer_port));
+                return;
             }
         }
-        if (strcmp(header_buffer, "PRED") == 0)
-        {
-            if (sscanf(message, "%*s %d %15s %5s", &argument_buffer, buffer_ip, buffer_port) == 3)
-            {
-                if (!is_string_valid_ip(buffer_ip))
-                    return;
-                if (!is_string_valid_port(buffer_port))
-                    return;
-                set_antecessor_node(node, create_node_data(argument_buffer, buffer_ip, buffer_port));
-            }
-        }
+        send_tcp_message(create_message(PRED, message->i_key, message->i_ip, message->i_port), node->self, node->sucessor);
+        set_sucessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port));
+        break;
+    case PRED:
+        set_antecessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port));
+        break;
+    default:
+        break;
     }
 }

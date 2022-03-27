@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 #include "client.h"
+#include "message.h"
 
 void run_ring(int key, char *ip, char *port)
 {
@@ -67,7 +68,7 @@ void run_ring(int key, char *ip, char *port)
             }
             if (FD_ISSET(node->socket_listen_tcp, &temp_set))
             {
-                char *message = read_tcp_message(node->socket_listen_tcp);
+                message_t*message = string_to_message(read_tcp_message(node->socket_listen_tcp));
                 if (message)
                 {
                     handle_message(message, node);

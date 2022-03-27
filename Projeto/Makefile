@@ -1,7 +1,7 @@
 CC = gcc
 flags = -std=gnu99 -g -O3 -Wall -Wextra -Werror=pedantic -Werror=format=2 -pedantic-errors -Wno-unknown-pragmas
 hfiles = data.h
-ofiles = client.o  ring.o node_data.o main.o
+ofiles = client.o  ring.o node_data.o main.o message.o
 
 
 ring: ${ofiles}
@@ -28,6 +28,9 @@ ring.o: ring.c ring.h
 
 node_data.o: node_data.c node_data.h
 	${CC} -c  ${flags} node_data.c node_data.h
+
+message.o: message.c message.h
+	${CC} -c  ${flags} message.c message.h
 
 
 

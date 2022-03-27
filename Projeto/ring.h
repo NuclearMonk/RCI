@@ -5,6 +5,7 @@
 
 #include "data.h"
 #include "node_data.h"
+#include "message.h"
 
 typedef struct node
 {
@@ -72,8 +73,8 @@ char* read_tcp_message(int fd);
  * @param destination the recipient of the message
  * @return int, 1 on case of success, -1 otherwise
  */
-int send_tcp_message(const char *message,const node_data_t* self, node_data_t *destination);
+int send_tcp_message(message_t *message,const node_data_t* self, node_data_t *destination);
 
-void handle_message(const char* message, node_t* node);
+void handle_message(const message_t* message, node_t* node);
 
 #endif
