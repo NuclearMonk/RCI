@@ -42,6 +42,7 @@ void destroy_node(node_t *node)
     if (!node)
         return;
     leave_ring(node);
+    close(node->socket_listen_tcp);
     destroy_node_data(node->self);
     destroy_node_data(node->sucessor);
     destroy_node_data(node->antecessor);
