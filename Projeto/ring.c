@@ -96,13 +96,13 @@ void show_node_info(const node_t *node)
 
 void set_sucessor_node(node_t *node, node_data_t *sucessor_node)
 {
-    if (!node)
+    if (!node || !sucessor_node) /* null checking */
         return;
     if (node->sucessor)
     {
         if (node->antecessor)
         {
-            if (node->antecessor->key == node->sucessor->key && node->self->key == node->sucessor->key)
+            if (node->antecessor->key == node->sucessor->key && node->self->key == node->sucessor->key) /* if we  are our antecessor and predecessor then we need to set our antecessor too */
             {
                 set_antecessor_node(node, create_node_data(sucessor_node->key, sucessor_node->ip, sucessor_node->port));
             }
@@ -115,18 +115,15 @@ void set_sucessor_node(node_t *node, node_data_t *sucessor_node)
 
 void set_antecessor_node(node_t *node, node_data_t *antecessor_node)
 {
-    if (!node || !antecessor_node)
+    if (!node || !antecessor_node) /* null checks */
         return;
-    if (node->antecessor)
+    if (node->antecessor) /* if we have an antecessor */
     {
-        if(node->sucessor)
+        destroy_node_data(node->antecessor); /* we make sure we don't leak memory by destroying the existing antecessor */
+        if (antecessor_node->key == node->self->key) /* if our antecessor is ourselves then we must also change our sucessor, as it will also be ourselves */
         {
-            if(antecessor_node->key == node->self->key)
-            {
-                set_sucessor_node(node, create_node_data(antecessor_node->key,antecessor_node->ip, antecessor_node->port));
-            }
+            set_sucessor_node(node, create_node_data(antecessor_node->key, antecessor_node->ip, antecessor_node->port));
         }
-        destroy_node_data(node->antecessor);
     }
 
     node->antecessor = antecessor_node;
@@ -202,10 +199,14 @@ int send_tcp_message(const char *message, const node_data_t *self, node_data_t *
         return -1;
     if (self->key == destination->key)
         return 0;
+
+    /* Debug Prints */
     printf("\033[0;32m");
     printf("MENSAGEM ENVIADA\nDestino:%d\nContent:%s\n\n", destination->key, message);
     printf("\033[0m");
     fflush(stdout);
+    /* end of debug prints */
+
     int fd = open_tcp_connection(destination);
     if (fd < 0)
         return -1;
@@ -238,6 +239,8 @@ void handle_message(const char *message, node_t *node)
                     return;
                 if (!is_string_valid_port(buffer_port))
                     return;
+
+                // if the sucessor node is already the current one we don't need to change anything
                 if (node->sucessor)
                 {
                     if (argument_buffer == node->sucessor->key)
@@ -245,6 +248,8 @@ void handle_message(const char *message, node_t *node)
                         return;
                     }
                 }
+
+                // operation to insert the new node in the ring
                 sprintf(buffer, "PRED %d %15s %5s", argument_buffer, buffer_ip, buffer_port);
                 send_tcp_message(buffer, node->self, node->sucessor);
                 set_sucessor_node(node, create_node_data(argument_buffer, buffer_ip, buffer_port));
