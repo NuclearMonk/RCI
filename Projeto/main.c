@@ -13,16 +13,20 @@ void run_ring(int key, char *ip, char *port)
         exit(-1);
     if (!is_string_valid_ip(ip))
         exit(-1);
+    if (!is_string_valid_port(port))
+        exit(1);
+    
     fd_set set, temp_set;
-
     console_command_t *command;
+    
     node_t *node = create_node(key, ip, port);
-    if(!node)
+    if (!node)
     {
-        fprintf(stdout,"The specified port could not be used\nPlease run again with different parameters\n");
+        fprintf(stdout, "The specified port could not be used\nPlease run again with different parameters\n");
         fflush(stdout);
         exit(-1);
     }
+
     FD_ZERO(&set);
     FD_SET(0, &set);
     FD_SET(node->socket_listen_tcp, &set);
@@ -63,13 +67,12 @@ void run_ring(int key, char *ip, char *port)
             }
             if (FD_ISSET(node->socket_listen_tcp, &temp_set))
             {
-                char* message = read_tcp_message(node->socket_listen_tcp);
-                if(message)
+                char *message = read_tcp_message(node->socket_listen_tcp);
+                if (message)
                 {
-                    fprintf(stdout,"MESSAGE RECEIVED:%s",message);
-                    fflush(stdout);
+                    handle_message(message, node);
+                    free(message);
                 }
-
             }
             count--;
         }

@@ -61,7 +61,7 @@ void show_node_info(const node_t *node);
  * @brief reads a message TCP message on socket fd
  *
  * @param fd the socket to read the message from
- * @return char* an heap alocated string that contains the message, NULL in case of failure
+ * @return char* an heap allocated string that contains the message, NULL in case of failure
  */
 char* read_tcp_message(int fd);
 
@@ -70,8 +70,10 @@ char* read_tcp_message(int fd);
  *
  * @param message the message
  * @param destination the recipient of the message
- * @return int, 1 on case of sucess, -1 otherwise
+ * @return int, 1 on case of success, -1 otherwise
  */
-int send_tcp_message(const char *message, node_data_t *destination);
+int send_tcp_message(const char *message,const node_data_t* self, node_data_t *destination);
+
+void handle_message(const char* message, node_t* node);
 
 #endif

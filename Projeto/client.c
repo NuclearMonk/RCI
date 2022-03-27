@@ -33,7 +33,7 @@ console_command_t *read_console_command(int fd)
     case 'p': /* Predecessor entry, "key ip port" format */
         if (sscanf(buffer, "%*s %d %15s %5s", &argument, buffer_ip, buffer_port) == 3)
         {
-            if (!is_string_valid_ip(buffer_ip))
+            if (!is_string_valid_ip(buffer_ip) && is_string_valid_port(buffer_port))
             {
 
                 free(command);
@@ -71,4 +71,17 @@ bool is_string_valid_ip(const char *candidate)
     if (inet_pton(AF_INET, candidate, &ip) == 1)
         return true;
     return true;
+}
+
+bool is_string_valid_port(const char* candidate)
+{
+    int port = atoi(candidate);
+    int len = strlen(candidate);
+    for (int i = 0; i < len; i++)
+    {
+        if(candidate[i]<'0' || candidate[i]>'9')return false;
+    }
+    
+    if(port >=0 && port <= 65535) return true;
+    return false;
 }
