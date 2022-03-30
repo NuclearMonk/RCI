@@ -8,8 +8,9 @@
 #include "client.h"
 
 int open_tcp_connection(const node_data_t *target);
-
 int bind_tcp_socket(int fd, const node_data_t *node);
+
+int bind_udp_socket(int fd, const node_data_t *node);
 
 node_t *create_node(int key, const char *ip, const char *port)
 {
@@ -19,6 +20,13 @@ node_t *create_node(int key, const char *ip, const char *port)
     node->self = create_node_data(key, ip, port);
     node->socket_listen_tcp = socket(AF_INET, SOCK_STREAM, 0);
     int errorcode = bind_tcp_socket(node->socket_listen_tcp, node->self);
+    if (errorcode == -1)
+    {
+        destroy_node(node);
+        return NULL;
+    }
+    node->socket_listen_udp = socket(AF_INET, SOCK_DGRAM, 0);
+    errorcode = bind_udp_socket(node->socket_listen_udp, node->self);
     if (errorcode == -1)
     {
         destroy_node(node);
@@ -35,6 +43,7 @@ void destroy_node(node_t *node)
         return;
     leave_ring(node);
     close(node->socket_listen_tcp);
+    close(node->socket_listen_udp);
     destroy_node_data(node->self);
     destroy_node_data(node->sucessor);
     destroy_node_data(node->antecessor);
@@ -168,6 +177,23 @@ int bind_tcp_socket(int fd, const node_data_t *node)
     return listen(fd, 5);
 }
 
+int bind_udp_socket(int fd, const node_data_t *node)
+{
+    struct addrinfo *res;
+    struct addrinfo hints = {.ai_family = AF_INET, .ai_socktype = SOCK_DGRAM, .ai_flags = AI_PASSIVE};
+    int errorcode = getaddrinfo(node->ip, node->port, &hints, &res);
+    if (errorcode != 0)
+    {
+        freeaddrinfo(res);
+        return -1;
+    }
+    errorcode = bind(fd, res->ai_addr, res->ai_addrlen);
+    freeaddrinfo(res);
+    if (errorcode == -1)
+        return -1;
+    return errorcode;
+}
+
 char *read_tcp_message(int fd)
 {
     struct sockaddr addr;
@@ -184,7 +210,7 @@ char *read_tcp_message(int fd)
         return NULL;
     strcpy(message, buffer);
     printf("\033[0;31m");
-    printf("MENSAGEM RECEBIDA\n%s\n", buffer);
+    printf("MENSAGEM RECEBIDA TCP\n%s\n", buffer);
     printf("\033[0m");
     fflush(stdout);
 
@@ -192,6 +218,27 @@ char *read_tcp_message(int fd)
     close(newfd);
     return message;
 }
+
+char *read_udp_message(int fd)
+{
+    struct sockaddr addr;
+    socklen_t addrlen = sizeof(addr);
+    char buffer[128] = "";
+    int nread;
+    if ((nread = recvfrom(fd,buffer,128,0,&addr,&addrlen)) == -1)
+        return NULL;
+    buffer[nread] = '\0';
+    char *message = malloc((strlen(buffer) + 1) * sizeof(char));
+    if (!message)
+        return NULL;
+    strcpy(message, buffer);
+    printf("\033[0;31m");
+    printf("MENSAGEM RECEBIDA UDP\n%s\n", buffer);
+    printf("\033[0m");
+    fflush(stdout);
+    return message;
+}
+
 
 int send_tcp_message(message_t *message, const node_data_t *self, node_data_t *destination)
 {
@@ -265,7 +312,8 @@ void handle_message(message_t *message, node_t *node)
         }
         break;
     case RSP:
-        if(message->key != node->self->key)send_tcp_message(copy_message(message), node->self, node->sucessor);
+        if (message->key != node->self->key)
+            send_tcp_message(copy_message(message), node->self, node->sucessor);
         break;
     default:
         break;

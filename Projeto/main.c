@@ -7,6 +7,8 @@
 #include "client.h"
 #include "message.h"
 
+#define MAX(A, B) ((A > B) ? A : B)
+
 void run_ring(int key, char *ip, char *port)
 {
     struct sigaction act = {.sa_handler = SIG_IGN};
@@ -16,10 +18,10 @@ void run_ring(int key, char *ip, char *port)
         exit(-1);
     if (!is_string_valid_port(port))
         exit(1);
-    
+
     fd_set set, temp_set;
     console_command_t *command;
-    
+
     node_t *node = create_node(key, ip, port);
     if (!node)
     {
@@ -31,11 +33,12 @@ void run_ring(int key, char *ip, char *port)
     FD_ZERO(&set);
     FD_SET(0, &set);
     FD_SET(node->socket_listen_tcp, &set);
+    FD_SET(node->socket_listen_udp, &set);
 
     while (1)
     {
         temp_set = set;
-        int count = select(node->socket_listen_tcp + 1, &temp_set, NULL, NULL, NULL);
+        int count = select(MAX(node->socket_listen_tcp, node->socket_listen_udp) + 1, &temp_set, NULL, NULL, NULL);
         while (count > 0)
         {
             if (FD_ISSET(0, &temp_set))
@@ -71,7 +74,16 @@ void run_ring(int key, char *ip, char *port)
             }
             if (FD_ISSET(node->socket_listen_tcp, &temp_set))
             {
-                message_t*message = string_to_message(read_tcp_message(node->socket_listen_tcp));
+                message_t *message = string_to_message(read_tcp_message(node->socket_listen_tcp));
+                if (message)
+                {
+                    handle_message(message, node);
+                    free(message);
+                }
+            }
+            if (FD_ISSET(node->socket_listen_udp, &temp_set))
+            {
+                message_t *message = string_to_message(read_udp_message(node->socket_listen_udp));
                 if (message)
                 {
                     handle_message(message, node);

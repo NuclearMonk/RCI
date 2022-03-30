@@ -1,5 +1,3 @@
-
-
 #ifndef RING_H
 #define RING_H
 
@@ -72,6 +70,16 @@ void show_node_info(const node_t *node);
  * @return char* an heap allocated string that contains the message, NULL in case of failure
  */
 char* read_tcp_message(int fd);
+
+
+/**
+ * @brief reads a message UDP message on socket fd
+ *
+ * @param fd the socket to read the message from
+ * @return char* an heap allocated string that contains the message, NULL in case of failure
+ */
+char* read_udp_message(int fd);
+
 
 /**
  * @brief send a tcp message to the destination node

@@ -36,6 +36,7 @@ char *message_to_string(const message_t *message)
 
 message_t *string_to_message(char *string)
 {
+    if(!string){return NULL;
     char buffer_header[6] = "";
 
     int buffer_argument, buffer_key, buffer_message_id;
