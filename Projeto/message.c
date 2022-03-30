@@ -20,6 +20,14 @@ char *message_to_string(const message_t *message)
         sprintf(buffer, "PRED %d %15s %5s\n", message->i_key, message->i_ip, message->i_port);
         return buffer;
         break;
+    case FND:
+        sprintf(buffer, "FND %d %d %d %15s %5s\n", message->key, message->message_id, message->i_key, message->i_ip, message->i_port);
+        return buffer;
+        break;
+    case RSP:
+        sprintf(buffer, "RSP %d %d %d %15s %5s\n", message->key, message->message_id, message->i_key, message->i_ip, message->i_port);
+        return buffer;
+        break;
     default:
         return NULL;
         break;
@@ -28,37 +36,63 @@ char *message_to_string(const message_t *message)
 
 message_t *string_to_message(char *string)
 {
-    char header_buffer[6] = "";
+    char buffer_header[6] = "";
 
-    int argument_buffer;
+    int buffer_argument, buffer_key, buffer_message_id;
 
-    if (sscanf(string, "%5s", header_buffer) == 1)
+    if (sscanf(string, "%5s", buffer_header) == 1)
     {
         char buffer_ip[INET_ADDRSTRLEN] = "";
         char buffer_port[6] = "";
-        if (strcmp(header_buffer, "SELF") == 0)
+        if (strcmp(buffer_header, "SELF") == 0)
         {
-            if (sscanf(string, "%*s %d %15s %5s", &argument_buffer, buffer_ip, buffer_port) == 3)
+            if (sscanf(string, "%*s %d %15s %5s", &buffer_argument, buffer_ip, buffer_port) == 3)
             {
                 if (!is_string_valid_ip(buffer_ip))
                     return NULL;
                 if (!is_string_valid_port(buffer_port))
                     return NULL;
                 free(string);
-                return create_message(SELF, argument_buffer, buffer_ip, buffer_port);
+                return create_message(SELF,-1,-1, buffer_argument, buffer_ip, buffer_port);
             }
             return NULL;
         }
-        else if (strcmp(header_buffer, "PRED") == 0)
+        else if (strcmp(buffer_header, "PRED") == 0)
         {
-            if (sscanf(string, "%*s %d %15s %5s", &argument_buffer, buffer_ip, buffer_port) == 3)
+            if (sscanf(string, "%*s %d %15s %5s", &buffer_argument, buffer_ip, buffer_port) == 3)
             {
                 if (!is_string_valid_ip(buffer_ip))
                     return NULL;
                 if (!is_string_valid_port(buffer_port))
                     return NULL;
                 free(string);
-                return create_message(PRED, argument_buffer, buffer_ip, buffer_port);
+                return create_message(PRED,-1,-1, buffer_argument, buffer_ip, buffer_port);
+            }
+            return NULL;
+        }
+        else if (strcmp(buffer_header, "FND") == 0)
+        {
+            if (sscanf(string, "%*s %d %d %d %15s %5s", &buffer_key, &buffer_message_id, &buffer_argument, buffer_ip, buffer_port) == 5)
+            {
+                if (!is_string_valid_ip(buffer_ip))
+                    return NULL;
+                if (!is_string_valid_port(buffer_port))
+                    return NULL;
+                free(string);
+                return create_message(FND,buffer_key, buffer_message_id, buffer_argument, buffer_ip, buffer_port);
+            }
+            return NULL;
+        }
+        else if (strcmp(buffer_header, "RSP") == 0)
+        {
+            if (sscanf(string, "%*s %d %d %d %15s %5s", &buffer_key, &buffer_message_id, &buffer_argument, buffer_ip, buffer_port) == 5)
+            {
+                if (!is_string_valid_ip(buffer_ip))
+                    return NULL;
+                if (!is_string_valid_port(buffer_port))
+                    return NULL;
+                free(string);
+                return create_message(RSP, buffer_key, buffer_message_id, buffer_argument, buffer_ip, buffer_port);
             }
             return NULL;
         }
@@ -67,14 +101,26 @@ message_t *string_to_message(char *string)
     return NULL;
 }
 
-message_t *create_message(const message_header header, const int i_key, const char i_ip[INET_ADDRSTRLEN], const char i_port[6])
+message_t *create_message(const message_header header, const int key, const int message_id, const int i_key, const char i_ip[INET_ADDRSTRLEN], const char i_port[6])
+
 {
     message_t *message = calloc(1, sizeof(message_t));
     if (!message)
         return NULL;
     message->header = header;
+    message->key = key;
+    message->message_id = message_id;
     message->i_key = i_key;
     strcpy(message->i_ip, i_ip);
     strcpy(message->i_port, i_port);
     return message;
+}
+
+
+message_t *copy_message(message_t* message)
+{
+    message_t* ret = malloc(sizeof(message_t));
+    if(!ret)return NULL;
+    return memcpy(ret,message,sizeof(message_t));
+    
 }

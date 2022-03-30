@@ -37,6 +37,13 @@ void destroy_node(node_t *node);
 void create_empty_ring(node_t *node);
 
 /**
+ * @brief Leaves the current ring
+ * 
+ * @param node always self
+ */
+void leave_ring(node_t *node);
+
+/**
  * @brief Set the sucessor node
  *
  * @param node always the current node
@@ -75,6 +82,6 @@ char* read_tcp_message(int fd);
  */
 int send_tcp_message(message_t *message,const node_data_t* self, node_data_t *destination);
 
-void handle_message(const message_t* message, node_t* node);
+void handle_message(message_t* message, node_t* node);
 
 #endif

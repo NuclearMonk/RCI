@@ -11,14 +11,6 @@ int open_tcp_connection(const node_data_t *target);
 
 int bind_tcp_socket(int fd, const node_data_t *node);
 
-void leave_ring(node_t *node)
-{
-    if (NULL != node->antecessor && NULL != node->sucessor && node->sucessor->key != node->self->key && node->antecessor->key != node->self->key)
-    {
-        send_tcp_message((create_message(PRED, node->antecessor->key, node->antecessor->ip, node->antecessor->port)), node->self, node->sucessor);
-    }
-}
-
 node_t *create_node(int key, const char *ip, const char *port)
 {
     node_t *node = calloc(1, sizeof(node_t));
@@ -56,6 +48,18 @@ void create_empty_ring(node_t *node)
     destroy_node_data(node->antecessor);
     node->sucessor = create_node_data(node->self->key, node->self->ip, node->self->port);
     node->antecessor = create_node_data(node->self->key, node->self->ip, node->self->port);
+}
+
+void leave_ring(node_t *node)
+{
+    if (NULL != node->antecessor && NULL != node->sucessor && node->sucessor->key != node->self->key && node->antecessor->key != node->self->key)
+    {
+        send_tcp_message((create_message(PRED, -1, -1, node->antecessor->key, node->antecessor->ip, node->antecessor->port)), node->self, node->sucessor);
+    }
+    destroy_node_data(node->sucessor);
+    destroy_node_data(node->antecessor);
+    node->sucessor = NULL;
+    node->antecessor = NULL;
 }
 
 void show_node_info(const node_t *node)
@@ -126,7 +130,7 @@ void set_antecessor_node(node_t *node, node_data_t *antecessor_node)
     }
 
     node->antecessor = antecessor_node;
-    send_tcp_message(create_message(SELF, node->self->key, node->self->ip, node->self->port), node->self, node->antecessor);
+    send_tcp_message(create_message(SELF, -1, -1, node->self->key, node->self->ip, node->self->port), node->self, node->antecessor);
 }
 
 int open_tcp_connection(const node_data_t *target)
@@ -209,11 +213,9 @@ int send_tcp_message(message_t *message, const node_data_t *self, node_data_t *d
     int fd = open_tcp_connection(destination);
     if (fd < 0)
     {
-        printf("TESTE\n");
         free(message);
         fflush(stdout);
         return -1;
-
     }
     char *message_string = message_to_string(message);
     free(message);
@@ -230,7 +232,7 @@ int send_tcp_message(message_t *message, const node_data_t *self, node_data_t *d
     return errorcode;
 }
 
-void handle_message(const message_t *message, node_t *node)
+void handle_message(message_t *message, node_t *node)
 {
     switch (message->header)
     {
@@ -242,11 +244,28 @@ void handle_message(const message_t *message, node_t *node)
                 return;
             }
         }
-        send_tcp_message(create_message(PRED, message->i_key, message->i_ip, message->i_port), node->self, node->sucessor);
+        send_tcp_message(create_message(PRED, -1, -1, message->i_key, message->i_ip, message->i_port), node->self, node->sucessor);
         set_sucessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port));
         break;
     case PRED:
         set_antecessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port));
+        break;
+    case FND:
+        if (node->self->key > node->sucessor->key)
+        {
+            send_tcp_message(create_message(RSP, message->i_key, message->message_id, node->self->key, node->self->ip, node->self->port), node->self, node->sucessor);
+        }
+        else if (message->key >= node->self->key && message->key < node->sucessor->key)
+        {
+            send_tcp_message(create_message(RSP, message->i_key, message->message_id, node->self->key, node->self->ip, node->self->port), node->self, node->sucessor);
+        }
+        else
+        {
+            send_tcp_message(copy_message(message), node->self, node->sucessor);
+        }
+        break;
+    case RSP:
+        if(message->key != node->self->key)send_tcp_message(copy_message(message), node->self, node->sucessor);
         break;
     default:
         break;

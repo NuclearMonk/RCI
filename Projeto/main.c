@@ -55,6 +55,9 @@ void run_ring(int key, char *ip, char *port)
                     case c_show:
                         show_node_info(node);
                         break;
+                    case c_leave:
+                        leave_ring(node);
+                        break;
                     case c_exit:
                         destroy_node(node);
                         free(command);
