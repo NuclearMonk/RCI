@@ -63,7 +63,7 @@ void leave_ring(node_t *node)
 {
     if (NULL != node->antecessor && NULL != node->sucessor && node->sucessor->key != node->self->key && node->antecessor->key != node->self->key)
     {
-        send_tcp_message((create_message(PRED, -1, -1, node->antecessor->key, node->antecessor->ip, node->antecessor->port)), node->self, node->sucessor);
+        send_tcp_message((create_message(PRED, -1, -1, node->antecessor->key, node->antecessor->ip, node->antecessor->port)), node, node->sucessor);
     }
     destroy_node_data(node->sucessor);
     destroy_node_data(node->antecessor);
@@ -139,7 +139,7 @@ void set_antecessor_node(node_t *node, node_data_t *antecessor_node)
     }
 
     node->antecessor = antecessor_node;
-    send_tcp_message(create_message(SELF, -1, -1, node->self->key, node->self->ip, node->self->port), node->self, node->antecessor);
+    send_tcp_message(create_message(SELF, -1, -1, node->self->key, node->self->ip, node->self->port), node, node->antecessor);
 }
 
 int open_tcp_connection(const node_data_t *target)
@@ -221,14 +221,36 @@ char *read_tcp_message(int fd)
 
 char *read_udp_message(int fd)
 {
+
     struct sockaddr addr;
     socklen_t addrlen = sizeof(addr);
     char buffer[128] = "";
     int nread;
-    if ((nread = recvfrom(fd,buffer,128,0,&addr,&addrlen)) == -1)
+    if ((nread = recvfrom(fd, buffer, 128, 0, &addr, &addrlen)) == -1)
         return NULL;
     buffer[nread] = '\0';
     char *message = malloc((strlen(buffer) + 1) * sizeof(char));
+    if (!message)
+        return NULL;
+    strcpy(message, buffer);
+    message_t *msg = string_to_message(message);
+    if (msg->header != ACK)
+    {
+        message_t *msg_2 = create_message(ACK, 0, 0, 0, NULL, NULL);
+        char *message_string = message_to_string(msg_2);
+        free(msg_2);
+        if (!message_string)
+        {
+            free(msg);
+            free(message);
+            return NULL;
+
+        }
+        sendto(fd, message_string, strlen(message_string) + 1, 0, &addr, addrlen);
+        free(message_string);
+    }
+    free(msg);
+    message = malloc((strlen(buffer) + 1) * sizeof(char));
     if (!message)
         return NULL;
     strcpy(message, buffer);
@@ -239,8 +261,7 @@ char *read_udp_message(int fd)
     return message;
 }
 
-
-int send_tcp_message(message_t *message, const node_data_t *self, node_data_t *destination)
+int send_tcp_message(message_t *message, const node_t *node, node_data_t *destination)
 {
     if (!message)
         return -1;
@@ -249,7 +270,7 @@ int send_tcp_message(message_t *message, const node_data_t *self, node_data_t *d
         free(message);
         return -1;
     }
-    if (self->key == destination->key)
+    if (node->self->key == destination->key)
     {
         free(message);
         return 0;
@@ -261,20 +282,55 @@ int send_tcp_message(message_t *message, const node_data_t *self, node_data_t *d
     if (fd < 0)
     {
         free(message);
-        fflush(stdout);
         return -1;
     }
     char *message_string = message_to_string(message);
     free(message);
     /* Debug Prints */
     printf("\033[0;32m");
-    printf("MENSAGEM ENVIADA\nDestino:%d\nContent:%s\n\n", destination->key, message_string);
+    printf("MENSAGEM ENVIADA TCP\nDestino:%d\nContent:%s\n\n", destination->key, message_string);
     printf("\033[0m");
     fflush(stdout);
     int length = strlen(message_string) + 1;
     int errorcode = write(fd, message_string, length);
     shutdown(fd, SHUT_RDWR);
     close(fd);
+    free(message_string);
+    return errorcode;
+}
+
+int send_udp_message(message_t *message, const node_t *node, node_data_t *destination)
+{
+    if (!destination)
+    {
+        free(message);
+        return -1;
+    }
+    if (node->self->key == destination->key)
+    {
+        free(message);
+        return 0;
+    }
+    struct addrinfo *res;
+    struct addrinfo hints = {.ai_family = AF_INET, .ai_socktype = SOCK_DGRAM};
+    int errorcode;
+    errorcode = getaddrinfo(destination->ip, destination->port, &hints, &res);
+    if (errorcode != 0)
+    {
+        freeaddrinfo(res);
+        free(message);
+        return -1;
+    }
+    char *message_string = message_to_string(message);
+    free(message);
+    /* Debug Prints */
+    printf("\033[0;32m");
+    printf("MENSAGEM ENVIADA UDP\nDestino:%d\nContent:%s\n\n", destination->key, message_string);
+    printf("\033[0m");
+    fflush(stdout);
+    int length = strlen(message_string) + 1;
+    errorcode = sendto(node->socket_listen_udp, message_string, length, 0, res->ai_addr, res->ai_addrlen);
+    freeaddrinfo(res);
     free(message_string);
     return errorcode;
 }
@@ -291,7 +347,7 @@ void handle_message(message_t *message, node_t *node)
                 return;
             }
         }
-        send_tcp_message(create_message(PRED, -1, -1, message->i_key, message->i_ip, message->i_port), node->self, node->sucessor);
+        send_tcp_message(create_message(PRED, -1, -1, message->i_key, message->i_ip, message->i_port), node, node->sucessor);
         set_sucessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port));
         break;
     case PRED:
@@ -300,20 +356,22 @@ void handle_message(message_t *message, node_t *node)
     case FND:
         if (node->self->key > node->sucessor->key)
         {
-            send_tcp_message(create_message(RSP, message->i_key, message->message_id, node->self->key, node->self->ip, node->self->port), node->self, node->sucessor);
+            send_tcp_message(create_message(RSP, message->i_key, message->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor);
         }
         else if (message->key >= node->self->key && message->key < node->sucessor->key)
         {
-            send_tcp_message(create_message(RSP, message->i_key, message->message_id, node->self->key, node->self->ip, node->self->port), node->self, node->sucessor);
+            send_tcp_message(create_message(RSP, message->i_key, message->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor);
         }
         else
         {
-            send_tcp_message(copy_message(message), node->self, node->sucessor);
+            send_tcp_message(copy_message(message), node, node->sucessor);
         }
         break;
     case RSP:
         if (message->key != node->self->key)
-            send_tcp_message(copy_message(message), node->self, node->sucessor);
+            send_tcp_message(copy_message(message), node, node->sucessor);
+        break;
+    case ACK:
         break;
     default:
         break;

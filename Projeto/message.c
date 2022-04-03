@@ -106,6 +106,7 @@ message_t *string_to_message(char *string)
         }
         else if(strcmp(buffer_header,"ACK")==0)
         {
+            free(string);
             return(create_message(ACK,0,0,0,NULL,NULL));
         }
     }

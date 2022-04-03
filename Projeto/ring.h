@@ -88,7 +88,9 @@ char* read_udp_message(int fd);
  * @param destination the recipient of the message
  * @return int, 1 on case of success, -1 otherwise
  */
-int send_tcp_message(message_t *message,const node_data_t* self, node_data_t *destination);
+int send_tcp_message(message_t *message,const node_t* self, node_data_t *destination);
+
+int send_udp_message(message_t *message, const node_t* node, node_data_t* destination);
 
 void handle_message(message_t* message, node_t* node);
 
