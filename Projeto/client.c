@@ -73,7 +73,7 @@ bool is_string_valid_ip(const char *candidate)
     in_addr_t ip;
     if (inet_pton(AF_INET, candidate, &ip) == 1)
         return true;
-    return true;
+    return false;
 }
 
 bool is_string_valid_port(const char *candidate)

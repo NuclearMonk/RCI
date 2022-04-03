@@ -10,7 +10,8 @@ typedef enum
     PRED,
     SELF,
     FND,
-    RSP
+    RSP,
+    ACK
 } message_header;
 
 typedef struct message

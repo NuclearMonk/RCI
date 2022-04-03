@@ -28,6 +28,10 @@ char *message_to_string(const message_t *message)
         sprintf(buffer, "RSP %d %d %d %15s %5s\n", message->key, message->message_id, message->i_key, message->i_ip, message->i_port);
         return buffer;
         break;
+    case ACK:
+        sprintf(buffer,"ACK\n");
+        return buffer;
+        break;
     default:
         return NULL;
         break;
@@ -36,7 +40,10 @@ char *message_to_string(const message_t *message)
 
 message_t *string_to_message(char *string)
 {
-    if(!string){return NULL;
+    if (!string)
+    {
+        return NULL;
+    }
     char buffer_header[6] = "";
 
     int buffer_argument, buffer_key, buffer_message_id;
@@ -54,7 +61,7 @@ message_t *string_to_message(char *string)
                 if (!is_string_valid_port(buffer_port))
                     return NULL;
                 free(string);
-                return create_message(SELF,-1,-1, buffer_argument, buffer_ip, buffer_port);
+                return create_message(SELF, -1, -1, buffer_argument, buffer_ip, buffer_port);
             }
             return NULL;
         }
@@ -67,7 +74,7 @@ message_t *string_to_message(char *string)
                 if (!is_string_valid_port(buffer_port))
                     return NULL;
                 free(string);
-                return create_message(PRED,-1,-1, buffer_argument, buffer_ip, buffer_port);
+                return create_message(PRED, -1, -1, buffer_argument, buffer_ip, buffer_port);
             }
             return NULL;
         }
@@ -80,7 +87,7 @@ message_t *string_to_message(char *string)
                 if (!is_string_valid_port(buffer_port))
                     return NULL;
                 free(string);
-                return create_message(FND,buffer_key, buffer_message_id, buffer_argument, buffer_ip, buffer_port);
+                return create_message(FND, buffer_key, buffer_message_id, buffer_argument, buffer_ip, buffer_port);
             }
             return NULL;
         }
@@ -97,6 +104,10 @@ message_t *string_to_message(char *string)
             }
             return NULL;
         }
+        else if(strcmp(buffer_header,"ACK")==0)
+        {
+            return(create_message(ACK,0,0,0,NULL,NULL));
+        }
     }
     free(string);
     return NULL;
@@ -108,6 +119,11 @@ message_t *create_message(const message_header header, const int key, const int 
     message_t *message = calloc(1, sizeof(message_t));
     if (!message)
         return NULL;
+    if(header == ACK)
+    {
+        message->header = ACK;
+        return message;
+    }
     message->header = header;
     message->key = key;
     message->message_id = message_id;
@@ -117,11 +133,10 @@ message_t *create_message(const message_header header, const int key, const int 
     return message;
 }
 
-
-message_t *copy_message(message_t* message)
+message_t *copy_message(message_t *message)
 {
-    message_t* ret = malloc(sizeof(message_t));
-    if(!ret)return NULL;
-    return memcpy(ret,message,sizeof(message_t));
-    
+    message_t *ret = malloc(sizeof(message_t));
+    if (!ret)
+        return NULL;
+    return memcpy(ret, message, sizeof(message_t));
 }
