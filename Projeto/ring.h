@@ -10,10 +10,10 @@ typedef struct node
     node_data_t *self;
     data_t data; /* dados */
     node_data_t *sucessor;
-    node_data_t *bridge; /* Node destino do atalho */
+    node_data_t *chord; /* Node destino do atalho */
     node_data_t *antecessor;
-    int socket_listen_tcp;
-    int socket_listen_udp;
+    int socket_tcp;
+    int socket_udp;
 } node_t;
 
 /**
@@ -36,7 +36,7 @@ void create_empty_ring(node_t *node);
 
 /**
  * @brief Leaves the current ring
- * 
+ *
  * @param node always self
  */
 void leave_ring(node_t *node);
@@ -56,6 +56,8 @@ void set_sucessor_node(node_t *node, node_data_t *sucessor_node);
  */
 void set_antecessor_node(node_t *node, node_data_t *antecessor_node);
 
+void set_chord(node_t* node, node_data_t* chord_node);
+
 /**
  * @brief print this nodes info to the console
  *
@@ -69,8 +71,7 @@ void show_node_info(const node_t *node);
  * @param fd the socket to read the message from
  * @return char* an heap allocated string that contains the message, NULL in case of failure
  */
-char* read_tcp_message(int fd);
-
+char *read_tcp_message(int fd);
 
 /**
  * @brief reads a message UDP message on socket fd
@@ -78,20 +79,14 @@ char* read_tcp_message(int fd);
  * @param fd the socket to read the message from
  * @return char* an heap allocated string that contains the message, NULL in case of failure
  */
-char* read_udp_message(int fd);
-
+char *read_udp_message(int fd);
 
 /**
- * @brief send a tcp message to the destination node
- *
+ * @brief handles a message
+ * 
  * @param message the message
- * @param destination the recipient of the message
- * @return int, 1 on case of success, -1 otherwise
+ * @param self  always self 
  */
-int send_tcp_message(message_t *message,const node_t* self, node_data_t *destination);
-
-int send_udp_message(message_t *message, const node_t* node, node_data_t* destination);
-
-void handle_message(message_t* message, node_t* node);
+void handle_message(message_t *message, node_t *self);
 
 #endif

@@ -51,6 +51,27 @@ console_command_t *read_console_command(int fd)
             return NULL;
         }
         break;
+    case 'c':
+        if (sscanf(buffer, "%*s %d %15s %5s", &argument, buffer_ip, buffer_port) == 3)
+        {
+            if (!is_string_valid_ip(buffer_ip) && is_string_valid_port(buffer_port))
+            {
+
+                free(command);
+                return NULL;
+            }
+
+            command->command = c_chord;
+            command->argument = argument;
+            memcpy((command->ip), buffer_ip, INET_ADDRSTRLEN);
+            memcpy((command->port), buffer_port, 6);
+        }
+        else
+        {
+            free(command);
+            return NULL;
+        }
+        break;
     case 's': /* Show node info, no arguments needed */
         command->command = c_show;
         break;

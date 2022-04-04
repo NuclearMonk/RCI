@@ -8,9 +8,12 @@
 #include "client.h"
 
 int open_tcp_connection(const node_data_t *target);
-int bind_tcp_socket(int fd, const node_data_t *node);
 
+int bind_tcp_socket(int fd, const node_data_t *node);
 int bind_udp_socket(int fd, const node_data_t *node);
+
+int send_tcp_message(message_t *message, const node_t *self, node_data_t *destination);
+int send_udp_message(message_t *message, const node_t *node, node_data_t *destination);
 
 node_t *create_node(int key, const char *ip, const char *port)
 {
@@ -18,15 +21,15 @@ node_t *create_node(int key, const char *ip, const char *port)
     if (!node)
         return NULL;
     node->self = create_node_data(key, ip, port);
-    node->socket_listen_tcp = socket(AF_INET, SOCK_STREAM, 0);
-    int errorcode = bind_tcp_socket(node->socket_listen_tcp, node->self);
+    node->socket_tcp = socket(AF_INET, SOCK_STREAM, 0);
+    int errorcode = bind_tcp_socket(node->socket_tcp, node->self);
     if (errorcode == -1)
     {
         destroy_node(node);
         return NULL;
     }
-    node->socket_listen_udp = socket(AF_INET, SOCK_DGRAM, 0);
-    errorcode = bind_udp_socket(node->socket_listen_udp, node->self);
+    node->socket_udp = socket(AF_INET, SOCK_DGRAM, 0);
+    errorcode = bind_udp_socket(node->socket_udp, node->self);
     if (errorcode == -1)
     {
         destroy_node(node);
@@ -42,12 +45,12 @@ void destroy_node(node_t *node)
     if (!node)
         return;
     leave_ring(node);
-    close(node->socket_listen_tcp);
-    close(node->socket_listen_udp);
+    close(node->socket_tcp);
+    close(node->socket_udp);
     destroy_node_data(node->self);
     destroy_node_data(node->sucessor);
     destroy_node_data(node->antecessor);
-    destroy_node_data(node->bridge);
+    destroy_node_data(node->chord);
     free(node);
 }
 
@@ -141,6 +144,14 @@ void set_antecessor_node(node_t *node, node_data_t *antecessor_node)
     node->antecessor = antecessor_node;
     send_tcp_message(create_message(SELF, -1, -1, node->self->key, node->self->ip, node->self->port), node, node->antecessor);
 }
+
+void set_chord(node_t* node, node_data_t* chord_node)
+{
+        if (!node || !chord_node) /* null checks */
+        return;
+        node->chord = chord_node;
+}
+
 
 int open_tcp_connection(const node_data_t *target)
 {
@@ -244,7 +255,6 @@ char *read_udp_message(int fd)
             free(msg);
             free(message);
             return NULL;
-
         }
         sendto(fd, message_string, strlen(message_string) + 1, 0, &addr, addrlen);
         free(message_string);
@@ -261,6 +271,13 @@ char *read_udp_message(int fd)
     return message;
 }
 
+/**
+ * @brief sends a message to the destination node using the TCP protocol
+ *
+ * @param message the message
+ * @param destination the recipient of the message
+ * @return int, 1 on case of success, -1 otherwise
+ */
 int send_tcp_message(message_t *message, const node_t *node, node_data_t *destination)
 {
     if (!message)
@@ -275,9 +292,6 @@ int send_tcp_message(message_t *message, const node_t *node, node_data_t *destin
         free(message);
         return 0;
     }
-
-    /* end of debug prints */
-
     int fd = open_tcp_connection(destination);
     if (fd < 0)
     {
@@ -299,6 +313,13 @@ int send_tcp_message(message_t *message, const node_t *node, node_data_t *destin
     return errorcode;
 }
 
+/**
+ * @brief sends a message to the destination node using the UDP protocol
+ *
+ * @param message the message
+ * @param destination the recipient of the message
+ * @return int, 1 on case of success, -1 otherwise
+ */
 int send_udp_message(message_t *message, const node_t *node, node_data_t *destination)
 {
     if (!destination)
@@ -329,7 +350,7 @@ int send_udp_message(message_t *message, const node_t *node, node_data_t *destin
     printf("\033[0m");
     fflush(stdout);
     int length = strlen(message_string) + 1;
-    errorcode = sendto(node->socket_listen_udp, message_string, length, 0, res->ai_addr, res->ai_addrlen);
+    errorcode = sendto(node->socket_udp, message_string, length, 0, res->ai_addr, res->ai_addrlen);
     freeaddrinfo(res);
     free(message_string);
     return errorcode;
