@@ -1,14 +1,12 @@
 #ifndef RING_H
 #define RING_H
 
-#include "data.h"
 #include "node_data.h"
 #include "message.h"
-
+#define MAX_KEY 32
 typedef struct node
 {
     node_data_t *self;
-    data_t data; /* dados */
     node_data_t *sucessor;
     node_data_t *chord; /* Node destino do atalho */
     node_data_t *antecessor;
@@ -90,5 +88,7 @@ char *read_udp_message(int fd);
  * @param self  always self 
  */
 void handle_message(message_t *message, node_t *self);
+
+int calculate_distance(int start, int end);
 
 #endif

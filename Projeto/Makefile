@@ -1,6 +1,5 @@
 CC = gcc
 flags = -std=gnu99 -g -O3 -Wall -Wextra -Werror=pedantic -Werror=format=2 -pedantic-errors -Wno-unknown-pragmas
-hfiles = data.h
 ofiles = client.o  ring.o node_data.o main.o message.o
 
 

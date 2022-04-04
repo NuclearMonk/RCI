@@ -74,7 +74,6 @@ void leave_ring(node_t *node)
     node->sucessor = NULL;
     node->antecessor = NULL;
     node->chord = NULL;
-
 }
 
 void show_node_info(const node_t *node)
@@ -371,6 +370,26 @@ int send_udp_message(message_t *message, const node_t *node, node_data_t *destin
     return errorcode;
 }
 
+int send_message(message_t *message, const node_t *node, int destination_key)
+{
+    if (!node || !node->sucessor)
+    {
+        free(message);
+        return -1;
+    }
+    if (!node->chord)
+    {
+        return send_tcp_message(message, node, node->sucessor);
+    }
+    printf("chord-dest:%d\nsucc-dest:%d\n",calculate_distance(node->chord->key, destination_key),calculate_distance(node->sucessor->key, destination_key));
+    fflush(stdout);
+    if (calculate_distance(node->chord->key, destination_key) < calculate_distance(node->sucessor->key, destination_key))
+    {
+        return send_udp_message(message, node, node->chord);
+    }
+        return send_tcp_message(message, node, node->sucessor);
+}
+
 void handle_message(message_t *message, node_t *node)
 {
     switch (message->header)
@@ -390,26 +409,30 @@ void handle_message(message_t *message, node_t *node)
         set_antecessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port));
         break;
     case FND:
-        if (node->self->key > node->sucessor->key)
+        if (calculate_distance(node->self->key, message->key) < calculate_distance(node->sucessor->key, message->key))
         {
-            send_tcp_message(create_message(RSP, message->i_key, message->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor);
-        }
-        else if (message->key >= node->self->key && message->key < node->sucessor->key)
-        {
-            send_tcp_message(create_message(RSP, message->i_key, message->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor);
+            send_message(create_message(RSP, message->i_key, message->message_id, node->self->key, node->self->ip, node->self->port), node, message->i_key);
+           /*  send_tcp_message(create_message(RSP, message->i_key, message->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor); */
         }
         else
         {
-            send_tcp_message(copy_message(message), node, node->sucessor);
+            send_message(copy_message(message), node, message->i_key);
+            /* send_tcp_message(copy_message(message), node, node->sucessor); */
         }
+        fflush(stdout);
         break;
     case RSP:
         if (message->key != node->self->key)
-            send_tcp_message(copy_message(message), node, node->sucessor);
+            send_message(copy_message(message), node, message->i_key);
         break;
     case ACK:
         break;
     default:
         break;
     }
+}
+
+int calculate_distance(int start, int end)
+{
+    return abs((end - start) % MAX_KEY);
 }
