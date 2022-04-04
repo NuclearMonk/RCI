@@ -57,6 +57,8 @@ void set_sucessor_node(node_t *node, node_data_t *sucessor_node);
 void set_antecessor_node(node_t *node, node_data_t *antecessor_node);
 
 void set_chord(node_t* node, node_data_t* chord_node);
+void remove_chord(node_t* node);
+
 
 /**
  * @brief print this nodes info to the console

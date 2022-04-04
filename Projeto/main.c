@@ -56,6 +56,10 @@ void run_ring(int key, char *ip, char *port)
                         set_antecessor_node(node, create_node_data(command->argument, command->ip, command->port));
                         break;
                     case c_chord:
+                        set_chord(node,create_node_data(command->argument,command->ip,command->port));
+                        break;
+                    case c_dchord:
+                        remove_chord(node);
                         break;
                     case c_show:
                         show_node_info(node);

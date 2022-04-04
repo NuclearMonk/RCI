@@ -70,8 +70,11 @@ void leave_ring(node_t *node)
     }
     destroy_node_data(node->sucessor);
     destroy_node_data(node->antecessor);
+    destroy_node_data(node->chord);
     node->sucessor = NULL;
     node->antecessor = NULL;
+    node->chord = NULL;
+
 }
 
 void show_node_info(const node_t *node)
@@ -105,6 +108,13 @@ void show_node_info(const node_t *node)
         printf("KEY: %d\n", node->sucessor->key);
         printf("IP: %s\n", node->sucessor->ip);
         printf("PORT: %s\n", node->sucessor->port);
+    }
+    if (node->chord)
+    {
+        printf("Chord node:\n");
+        printf("KEY: %d\n", node->chord->key);
+        printf("IP: %s\n", node->chord->ip);
+        printf("PORT: %s\n", node->chord->port);
     }
     fflush(stdout);
 }
@@ -145,13 +155,18 @@ void set_antecessor_node(node_t *node, node_data_t *antecessor_node)
     send_tcp_message(create_message(SELF, -1, -1, node->self->key, node->self->ip, node->self->port), node, node->antecessor);
 }
 
-void set_chord(node_t* node, node_data_t* chord_node)
+void set_chord(node_t *node, node_data_t *chord_node)
 {
-        if (!node || !chord_node) /* null checks */
+    if (!node || !chord_node) /* null checks */
         return;
-        node->chord = chord_node;
+    node->chord = chord_node;
 }
 
+void remove_chord(node_t *node)
+{
+    destroy_node_data(node->chord);
+    node->chord = NULL;
+}
 
 int open_tcp_connection(const node_data_t *target)
 {

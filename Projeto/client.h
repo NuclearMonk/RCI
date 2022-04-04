@@ -11,7 +11,7 @@ typedef enum
    c_bentry,
    c_pentry,
    c_chord,
-   c_echord,
+   c_dchord,
    c_show,
    c_find,
    c_leave,

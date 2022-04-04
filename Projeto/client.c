@@ -72,6 +72,9 @@ console_command_t *read_console_command(int fd)
             return NULL;
         }
         break;
+    case 'd':
+        command->command = c_dchord;
+        break;
     case 's': /* Show node info, no arguments needed */
         command->command = c_show;
         break;
