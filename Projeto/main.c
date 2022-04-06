@@ -46,7 +46,6 @@ void run_ring(int key, char *ip, char *port)
                 command = read_console_command(0);
                 if (command)
                 {
-
                     switch (command->command)
                     {
                     case c_new:

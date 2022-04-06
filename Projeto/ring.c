@@ -150,9 +150,10 @@ void set_antecessor_node(node_t *node, node_data_t *antecessor_node)
         }
         destroy_node_data(node->antecessor); /* we make sure we don't leak memory by destroying the existing antecessor */
     }
-
-    node->antecessor = antecessor_node;
-    send_tcp_message(create_message(SELF, -1, -1, node->self->key, node->self->ip, node->self->port), node, node->antecessor);
+    if (send_tcp_message(create_message(SELF, -1, -1, node->self->key, node->self->ip, node->self->port), node, antecessor_node)!=-1)
+    {
+        node->antecessor = antecessor_node;
+    }
 }
 
 void set_chord(node_t *node, node_data_t *chord_node)
@@ -408,33 +409,37 @@ void handle_message(message_t *message, node_t *node)
         set_antecessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port));
         break;
     case FND:
-        if (calculate_distance(node->self->key, message->key) < calculate_distance(node->sucessor->key, message->key))
+        if (node->sucessor)
         {
-            send_message(create_message(RSP, message->i_key, message->message_id, node->self->key, node->self->ip, node->self->port), node, message->i_key);
-           /*  send_tcp_message(create_message(RSP, message->i_key, message->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor); */
+            if (calculate_distance(node->self->key, message->key) < calculate_distance(node->sucessor->key, message->key))
+            {
+                send_message(create_message(RSP, message->i_key, message->message_id, node->self->key, node->self->ip, node->self->port), node, message->i_key);
+                /*  send_tcp_message(create_message(RSP, message->i_key, message->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor); */
+            }
+            else
+            {
+                send_message(copy_message(message), node, node->sucessor->key);
+                /* send_tcp_message(copy_message(message), node, node->sucessor); */
+            }
         }
-        else
-        {
-            send_message(copy_message(message), node, node->sucessor->key);
-            /* send_tcp_message(copy_message(message), node, node->sucessor); */
-        }
-        fflush(stdout);
         break;
     case RSP:
-        if (!(calculate_distance(node->self->key, message->key) < calculate_distance(node->sucessor->key, message->key)))
-            send_message(copy_message(message), node, message->i_key);
-        else
+        if (node->sucessor)
         {
-            node_data_t* node_data;
-            int is_find;
-            node->wait_list = find_and_pop_element(node->wait_list,message->message_id,&is_find,&node_data);
-            if(is_find)
+            if (!(calculate_distance(node->self->key, message->key) < calculate_distance(node->sucessor->key, message->key)))
+                send_message(copy_message(message), node, message->i_key);
+            else
             {
-                printf("FIND RESULS FOR SEARCH ID:%d\n",message->message_id);
-                printf("KEY:%d\n",message->i_key);
-                printf("IP:%s\n",message->i_ip);
-                printf("port:%s\n",message->i_port);
-
+                node_data_t *node_data;
+                int is_find;
+                node->wait_list = find_and_pop_element(node->wait_list, message->message_id, &is_find, &node_data);
+                if (is_find)
+                {
+                    printf("FIND RESULS FOR SEARCH ID:%d\n", message->message_id);
+                    printf("KEY:%d\n", message->i_key);
+                    printf("IP:%s\n", message->i_ip);
+                    printf("port:%s\n", message->i_port);
+                }
             }
         }
         break;
@@ -445,10 +450,10 @@ void handle_message(message_t *message, node_t *node)
     }
 }
 
-void find_key(int key, node_t* node)
+void find_key(int key, node_t *node)
 {
-    node->wait_list = add_element(node->wait_list,node->message_id,1,NULL);
-    send_message(create_message(FND,key,node->message_id,node->self->key,node->self->ip,node->self->port),node,node->sucessor->key);
+    node->wait_list = add_element(node->wait_list, node->message_id, 1, NULL);
+    send_message(create_message(FND, key, node->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor->key);
     node->message_id++;
 }
 
