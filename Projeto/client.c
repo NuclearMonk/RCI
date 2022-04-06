@@ -72,8 +72,21 @@ console_command_t *read_console_command(int fd)
             return NULL;
         }
         break;
+
     case 'd':
         command->command = c_dchord;
+        break;
+    case 'f':
+        if (sscanf(buffer, "%*s %d", &argument) == 1)
+        {
+            command->command = c_find;
+            command->argument = argument;
+        }
+        else
+        {
+            free(command);
+            return NULL;
+        }
         break;
     case 's': /* Show node info, no arguments needed */
         command->command = c_show;

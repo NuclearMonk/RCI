@@ -61,6 +61,9 @@ void run_ring(int key, char *ip, char *port)
                     case c_dchord:
                         remove_chord(node);
                         break;
+                    case c_find:
+                        find_key(command->argument,node);
+                        break;
                     case c_show:
                         show_node_info(node);
                         break;

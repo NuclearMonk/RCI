@@ -1,6 +1,7 @@
 CC = gcc
 flags = -std=gnu99 -g -O3 -Wall -Wextra -Werror=pedantic -Werror=format=2 -pedantic-errors -Wno-unknown-pragmas
-ofiles = client.o  ring.o node_data.o main.o message.o
+ofiles = client.o  ring.o node_data.o main.o message.o wait_list.o
+testofiles = node_data.o wait_list.o
 
 
 ring: ${ofiles}
@@ -9,9 +10,9 @@ ring: ${ofiles}
 main.o: main.c
 	${CC} -c  ${flags} main.c
 
-tests: tests.o ${ofiles}
+tests: tests.o ${testofiles}
 	rm -f tests
-	${CC} ${flags} -o tests tests.o ${ofiles};
+	${CC} ${flags} -o tests tests.o ${testofiles};
 	make clean;
 	./tests;
 	
@@ -30,6 +31,9 @@ node_data.o: node_data.c node_data.h
 
 message.o: message.c message.h
 	${CC} -c  ${flags} message.c message.h
+
+wait_list.o: wait_list.c wait_list.h
+	${CC} -c  ${flags} wait_list.c wait_list.h
 
 
 

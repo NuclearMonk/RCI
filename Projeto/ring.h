@@ -3,6 +3,8 @@
 
 #include "node_data.h"
 #include "message.h"
+#include "wait_list.h"
+
 #define MAX_KEY 32
 typedef struct node
 {
@@ -10,6 +12,8 @@ typedef struct node
     node_data_t *sucessor;
     node_data_t *chord; /* Node destino do atalho */
     node_data_t *antecessor;
+    wait_list_t *wait_list;
+    int message_id;
     int socket_tcp;
     int socket_udp;
 } node_t;
@@ -57,7 +61,6 @@ void set_antecessor_node(node_t *node, node_data_t *antecessor_node);
 void set_chord(node_t* node, node_data_t* chord_node);
 void remove_chord(node_t* node);
 
-
 /**
  * @brief print this nodes info to the console
  *
@@ -88,6 +91,8 @@ char *read_udp_message(int fd);
  * @param self  always self 
  */
 void handle_message(message_t *message, node_t *self);
+
+void find_key(int key, node_t* node);
 
 int calculate_distance(int start, int end);
 

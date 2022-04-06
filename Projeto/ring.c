@@ -51,6 +51,7 @@ void destroy_node(node_t *node)
     destroy_node_data(node->sucessor);
     destroy_node_data(node->antecessor);
     destroy_node_data(node->chord);
+    destroy_list(node->wait_list);
     free(node);
 }
 
@@ -381,13 +382,11 @@ int send_message(message_t *message, const node_t *node, int destination_key)
     {
         return send_tcp_message(message, node, node->sucessor);
     }
-    printf("chord-dest:%d\nsucc-dest:%d\n",calculate_distance(node->chord->key, destination_key),calculate_distance(node->sucessor->key, destination_key));
-    fflush(stdout);
     if (calculate_distance(node->chord->key, destination_key) < calculate_distance(node->sucessor->key, destination_key))
     {
         return send_udp_message(message, node, node->chord);
     }
-        return send_tcp_message(message, node, node->sucessor);
+    return send_tcp_message(message, node, node->sucessor);
 }
 
 void handle_message(message_t *message, node_t *node)
@@ -416,20 +415,41 @@ void handle_message(message_t *message, node_t *node)
         }
         else
         {
-            send_message(copy_message(message), node, message->i_key);
+            send_message(copy_message(message), node, node->sucessor->key);
             /* send_tcp_message(copy_message(message), node, node->sucessor); */
         }
         fflush(stdout);
         break;
     case RSP:
-        if (message->key != node->self->key)
+        if (!(calculate_distance(node->self->key, message->key) < calculate_distance(node->sucessor->key, message->key)))
             send_message(copy_message(message), node, message->i_key);
+        else
+        {
+            node_data_t* node_data;
+            int is_find;
+            node->wait_list = find_and_pop_element(node->wait_list,message->message_id,&is_find,&node_data);
+            if(is_find)
+            {
+                printf("FIND RESULS FOR SEARCH ID:%d\n",message->message_id);
+                printf("KEY:%d\n",message->i_key);
+                printf("IP:%s\n",message->i_ip);
+                printf("port:%s\n",message->i_port);
+
+            }
+        }
         break;
     case ACK:
         break;
     default:
         break;
     }
+}
+
+void find_key(int key, node_t* node)
+{
+    node->wait_list = add_element(node->wait_list,node->message_id,1,NULL);
+    send_message(create_message(FND,key,node->message_id,node->self->key,node->self->ip,node->self->port),node,node->sucessor->key);
+    node->message_id++;
 }
 
 int calculate_distance(int start, int end)
