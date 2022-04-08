@@ -11,12 +11,14 @@ typedef enum
     SELF,
     FND,
     RSP,
+    EFND,
+    EPRED,
     ACK
 } message_header;
 
 typedef struct message
 {
-    message_header header;\
+    message_header header;
     int key;
     int message_id;
     int i_key;

@@ -150,7 +150,7 @@ void set_antecessor_node(node_t *node, node_data_t *antecessor_node)
         }
         destroy_node_data(node->antecessor); /* we make sure we don't leak memory by destroying the existing antecessor */
     }
-    if (send_tcp_message(create_message(SELF, -1, -1, node->self->key, node->self->ip, node->self->port), node, antecessor_node)!=-1)
+    if (send_tcp_message(create_message(SELF, -1, -1, node->self->key, node->self->ip, node->self->port), node, antecessor_node) != -1)
     {
         node->antecessor = antecessor_node;
     }
@@ -442,6 +442,12 @@ void handle_message(message_t *message, node_t *node)
                 }
             }
         }
+        break;
+    case EFND:
+        /* need to make the senders info reach here */
+        break;
+    case EPRED:
+        set_antecessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port));
         break;
     case ACK:
         break;
