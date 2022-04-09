@@ -27,8 +27,21 @@ console_command_t *read_console_command(int fd)
     case 'n': /* create a new empty ring, no extra arguments */
         command->command = c_new;
         break;
-    case 'b': /* bentry command NOT IMPLEMENTED */
-        command->command = c_bentry;
+    case 'b':
+        if (sscanf(buffer, "%*s %d %15s %5s", &argument, buffer_ip, buffer_port) == 3)
+        {
+            if (!is_string_valid_ip(buffer_ip) && is_string_valid_port(buffer_port))
+            {
+
+                free(command);
+                return NULL;
+            }
+
+            command->command = c_bentry;
+            command->argument = argument;
+            memcpy((command->ip), buffer_ip, INET_ADDRSTRLEN);
+            memcpy((command->port), buffer_port, 6);
+        }
         break;
     case 'p': /* Predecessor entry, "key ip port" format */
         if (sscanf(buffer, "%*s %d %15s %5s", &argument, buffer_ip, buffer_port) == 3)

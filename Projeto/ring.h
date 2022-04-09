@@ -92,6 +92,8 @@ char *read_udp_message(int fd, struct sockaddr* addr, socklen_t* addrlen);
  */
 void handle_message(message_t *message, node_t *self);
 
+void enter_ring(node_t* node, node_data_t* existing_member);
+
 void find_key(int key, node_t* node);
 
 int calculate_distance(int start, int end);

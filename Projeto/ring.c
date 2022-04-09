@@ -12,8 +12,8 @@ int open_tcp_connection(const node_data_t *target);
 int bind_tcp_socket(int fd, const node_data_t *node);
 int bind_udp_socket(int fd, const node_data_t *node);
 
-int send_tcp_message(message_t *message, const node_t *self, node_data_t *destination);
-int send_udp_message(message_t *message, const node_t *node, node_data_t *destination);
+int send_tcp_message(message_t *message, node_t *node, node_data_t *destination);
+int send_udp_message(message_t *message, node_t *node, node_data_t *destination);
 
 node_t *create_node(int key, const char *ip, const char *port)
 {
@@ -150,6 +150,7 @@ void set_antecessor_node(node_t *node, node_data_t *antecessor_node)
         }
         destroy_node_data(node->antecessor); /* we make sure we don't leak memory by destroying the existing antecessor */
     }
+
     if (send_tcp_message(create_message(SELF, -1, -1, node->self->key, node->self->ip, node->self->port), node, antecessor_node) != -1)
     {
         node->antecessor = antecessor_node;
@@ -257,7 +258,7 @@ char *read_udp_message(int fd, struct sockaddr *addr, socklen_t *addrlen)
     if (!message)
         return NULL;
     strcpy(message, buffer);
-    message_t *msg = string_to_message(message, addr,addrleng);
+    message_t *msg = string_to_message(message, addr, addrlen);
     if (msg->header != ACK)
     {
         message_t *msg_2 = create_message(ACK, 0, 0, 0, NULL, NULL);
@@ -291,7 +292,7 @@ char *read_udp_message(int fd, struct sockaddr *addr, socklen_t *addrlen)
  * @param destination the recipient of the message
  * @return int, 1 on case of success, -1 otherwise
  */
-int send_tcp_message(message_t *message, const node_t *node, node_data_t *destination)
+int send_tcp_message(message_t *message, node_t *node, node_data_t *destination)
 {
     if (!message)
         return -1;
@@ -302,6 +303,10 @@ int send_tcp_message(message_t *message, const node_t *node, node_data_t *destin
     }
     if (node->self->key == destination->key)
     {
+        if (message->header == FND || message->header == RSP)
+        {
+            handle_message(message, node);
+        }
         free(message);
         return 0;
     }
@@ -333,7 +338,7 @@ int send_tcp_message(message_t *message, const node_t *node, node_data_t *destin
  * @param destination the recipient of the message
  * @return int, 1 on case of success, -1 otherwise
  */
-int send_udp_message(message_t *message, const node_t *node, node_data_t *destination)
+int send_udp_message(message_t *message, node_t *node, node_data_t *destination)
 {
     if (!destination)
     {
@@ -342,6 +347,10 @@ int send_udp_message(message_t *message, const node_t *node, node_data_t *destin
     }
     if (node->self->key == destination->key)
     {
+        if (message->header == FND || message->header == RSP)
+        {
+            handle_message(message, node);
+        }
         free(message);
         return 0;
     }
@@ -369,7 +378,7 @@ int send_udp_message(message_t *message, const node_t *node, node_data_t *destin
     return errorcode;
 }
 
-int send_message(message_t *message, const node_t *node, int destination_key)
+int send_message(message_t *message, node_t *node, int destination_key)
 {
     if (!node || !node->sucessor)
     {
@@ -403,12 +412,15 @@ void handle_message(message_t *message, node_t *node)
         set_sucessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port));
         break;
     case PRED:
-        set_antecessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port));
+        if (node->sucessor)
+        {
+            set_antecessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port));
+        }
         break;
     case FND:
         if (node->sucessor)
         {
-            if (calculate_distance(node->self->key, message->key) < calculate_distance(node->sucessor->key, message->key))
+            if (calculate_distance(node->self->key, message->key) <= calculate_distance(node->sucessor->key, message->key))
             {
                 send_message(create_message(RSP, message->i_key, message->message_id, node->self->key, node->self->ip, node->self->port), node, message->i_key);
                 /*  send_tcp_message(create_message(RSP, message->i_key, message->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor); */
@@ -423,7 +435,7 @@ void handle_message(message_t *message, node_t *node)
     case RSP:
         if (node->sucessor)
         {
-            if (!(calculate_distance(node->self->key, message->key) < calculate_distance(node->sucessor->key, message->key)))
+            if (!(calculate_distance(node->self->key, message->key) < calculate_distance(node->sucessor->key, message->key)) && node->self->key != node->sucessor->key)
                 send_message(copy_message(message), node, message->i_key);
             else
             {
@@ -439,13 +451,13 @@ void handle_message(message_t *message, node_t *node)
                 }
                 else
                 {
-                    send_udp_message(create_message(EPRED,-1,-1,message->i_key,message->i_ip,message->i_port),node,node_data);
+                    send_udp_message(create_message(EPRED, -1, -1, message->i_key, message->i_ip, message->i_port), node, node_data);
                 }
             }
         }
         break;
     case EFND:
-        node->wait_list = add_element(node->wait_list, node->message_id, 0, create_node_data(message->key,message->i_ip,message->i_port));
+        node->wait_list = add_element(node->wait_list, node->message_id, 0, create_node_data(message->key, message->i_ip, message->i_port));
         send_message(create_message(FND, message->key, node->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor->key);
         node->message_id++;
         break;
@@ -464,6 +476,12 @@ void find_key(int key, node_t *node)
     node->wait_list = add_element(node->wait_list, node->message_id, 1, NULL);
     send_message(create_message(FND, key, node->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor->key);
     node->message_id++;
+}
+
+void enter_ring(node_t *node, node_data_t *existing_member)
+{
+    send_udp_message(create_message(EFND, node->self->key, -1, -1, node->self->ip, node->self->port), node, existing_member);
+    destroy_node_data(existing_member);
 }
 
 int calculate_distance(int start, int end)

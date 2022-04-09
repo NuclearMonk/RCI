@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include "client.h"
 
-
 char *message_to_string(const message_t *message)
 {
     if (!message)
@@ -48,7 +47,7 @@ char *message_to_string(const message_t *message)
     }
 }
 
-message_t *string_to_message(char *string, struct sockaddr* sender_info, socklen_t* sender_info_len)
+message_t *string_to_message(char *string, struct sockaddr *sender_info, socklen_t *sender_info_len)
 {
     if (!string)
     {
@@ -119,7 +118,10 @@ message_t *string_to_message(char *string, struct sockaddr* sender_info, socklen
             if (sscanf(string, "%*s %d", &buffer_argument) == 1)
             {
                 free(string);
-                if(getnameinfo(sender_info,*sender_info_len,buffer_ip,INET_ADDRSTRLEN,buffer_port,6,0)!=0)return NULL;
+                if (getnameinfo(sender_info, *sender_info_len, buffer_ip, INET_ADDRSTRLEN, buffer_port, 6, 0) != 0)
+                    return NULL;
+                printf("%s %s", buffer_ip, buffer_port);
+                fflush(stdout);
                 return create_message(EFND, buffer_argument, -1, -1, buffer_ip, buffer_port);
             }
             return NULL;
@@ -162,6 +164,8 @@ message_t *create_message(const message_header header, const int key, const int 
     {
         message->header = EFND;
         message->key = key;
+        strcpy(message->i_ip, i_ip);
+        strcpy(message->i_port, i_port);
         return message;
     }
     message->header = header;

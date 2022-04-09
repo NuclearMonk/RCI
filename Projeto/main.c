@@ -22,7 +22,7 @@ void run_ring(int key, char *ip, char *port)
     fd_set set, temp_set;
     console_command_t *command;
     struct sockaddr sender_info;
-    socklen_t sender_info_len;
+    socklen_t sender_info_len = sizeof(sender_info);
     node_t *node = create_node(key, ip, port);
     if (!node)
     {
@@ -53,7 +53,11 @@ void run_ring(int key, char *ip, char *port)
                         create_empty_ring(node);
                         break;
                     case c_pentry:
+                        leave_ring(node);
                         set_antecessor_node(node, create_node_data(command->argument, command->ip, command->port));
+                        break;
+                    case c_bentry:
+                        enter_ring(node, create_node_data(command->argument,command->ip,command->port));
                         break;
                     case c_chord:
                         set_chord(node,create_node_data(command->argument,command->ip,command->port));
