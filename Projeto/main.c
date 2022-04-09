@@ -21,7 +21,8 @@ void run_ring(int key, char *ip, char *port)
 
     fd_set set, temp_set;
     console_command_t *command;
-
+    struct sockaddr sender_info;
+    socklen_t sender_info_len;
     node_t *node = create_node(key, ip, port);
     if (!node)
     {
@@ -82,7 +83,7 @@ void run_ring(int key, char *ip, char *port)
             }
             if (FD_ISSET(node->socket_tcp, &temp_set))
             {
-                message_t *message = string_to_message(read_tcp_message(node->socket_tcp));
+                message_t *message = string_to_message(read_tcp_message(node->socket_tcp,&sender_info,&sender_info_len),&sender_info,&sender_info_len);
                 if (message)
                 {
                     handle_message(message, node);
@@ -91,7 +92,7 @@ void run_ring(int key, char *ip, char *port)
             }
             if (FD_ISSET(node->socket_udp, &temp_set))
             {
-                message_t *message = string_to_message(read_udp_message(node->socket_udp));
+                message_t *message = string_to_message(read_udp_message(node->socket_udp,&sender_info,&sender_info_len),&sender_info,&sender_info_len);
                 if (message)
                 {
                     handle_message(message, node);

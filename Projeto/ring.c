@@ -221,13 +221,13 @@ int bind_udp_socket(int fd, const node_data_t *node)
     return errorcode;
 }
 
-char *read_tcp_message(int fd)
+char *read_tcp_message(int fd, struct sockaddr *addr, socklen_t *addrlen)
 {
-    struct sockaddr addr;
-    socklen_t addrlen = sizeof(addr);
+    // struct sockaddr addr;
+    // socklen_t addrlen = sizeof(addr);
     char buffer[128] = "";
     int newfd, nread;
-    if ((newfd = accept(fd, &addr, &addrlen)) == -1)
+    if ((newfd = accept(fd, addr, addrlen)) == -1)
         return NULL;
     if ((nread = read(newfd, &buffer, 128)) == -1)
         return NULL;
@@ -246,21 +246,18 @@ char *read_tcp_message(int fd)
     return message;
 }
 
-char *read_udp_message(int fd)
+char *read_udp_message(int fd, struct sockaddr *addr, socklen_t *addrlen)
 {
-
-    struct sockaddr addr;
-    socklen_t addrlen = sizeof(addr);
     char buffer[128] = "";
     int nread;
-    if ((nread = recvfrom(fd, buffer, 128, 0, &addr, &addrlen)) == -1)
+    if ((nread = recvfrom(fd, buffer, 128, 0, addr, addrlen)) == -1)
         return NULL;
     buffer[nread] = '\0';
     char *message = malloc((strlen(buffer) + 1) * sizeof(char));
     if (!message)
         return NULL;
     strcpy(message, buffer);
-    message_t *msg = string_to_message(message);
+    message_t *msg = string_to_message(message, addr,addrleng);
     if (msg->header != ACK)
     {
         message_t *msg_2 = create_message(ACK, 0, 0, 0, NULL, NULL);
@@ -272,7 +269,7 @@ char *read_udp_message(int fd)
             free(message);
             return NULL;
         }
-        sendto(fd, message_string, strlen(message_string) + 1, 0, &addr, addrlen);
+        sendto(fd, message_string, strlen(message_string) + 1, 0, addr, *addrlen);
         free(message_string);
     }
     free(msg);
@@ -435,16 +432,22 @@ void handle_message(message_t *message, node_t *node)
                 node->wait_list = find_and_pop_element(node->wait_list, message->message_id, &is_find, &node_data);
                 if (is_find)
                 {
-                    printf("FIND RESULS FOR SEARCH ID:%d\n", message->message_id);
+                    printf("FIND RESULTS FOR SEARCH ID:%d\n", message->message_id);
                     printf("KEY:%d\n", message->i_key);
                     printf("IP:%s\n", message->i_ip);
                     printf("port:%s\n", message->i_port);
+                }
+                else
+                {
+                    send_udp_message(create_message(EPRED,-1,-1,message->i_key,message->i_ip,message->i_port),node,node_data);
                 }
             }
         }
         break;
     case EFND:
-        /* need to make the senders info reach here */
+        node->wait_list = add_element(node->wait_list, node->message_id, 0, create_node_data(message->key,message->i_ip,message->i_port));
+        send_message(create_message(FND, message->key, node->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor->key);
+        node->message_id++;
         break;
     case EPRED:
         set_antecessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port));

@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "client.h"
+
+
 char *message_to_string(const message_t *message)
 {
     if (!message)
@@ -46,7 +48,7 @@ char *message_to_string(const message_t *message)
     }
 }
 
-message_t *string_to_message(char *string)
+message_t *string_to_message(char *string, struct sockaddr* sender_info, socklen_t* sender_info_len)
 {
     if (!string)
     {
@@ -117,7 +119,8 @@ message_t *string_to_message(char *string)
             if (sscanf(string, "%*s %d", &buffer_argument) == 1)
             {
                 free(string);
-                return create_message(EFND, buffer_argument, -1, -1, NULL, NULL);
+                if(getnameinfo(sender_info,*sender_info_len,buffer_ip,INET_ADDRSTRLEN,buffer_port,6,0)!=0)return NULL;
+                return create_message(EFND, buffer_argument, -1, -1, buffer_ip, buffer_port);
             }
             return NULL;
         }

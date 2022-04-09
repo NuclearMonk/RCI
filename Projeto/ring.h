@@ -74,7 +74,7 @@ void show_node_info(const node_t *node);
  * @param fd the socket to read the message from
  * @return char* an heap allocated string that contains the message, NULL in case of failure
  */
-char *read_tcp_message(int fd);
+char *read_tcp_message(int fd, struct sockaddr* addr, socklen_t* addrlen);
 
 /**
  * @brief reads a message UDP message on socket fd
@@ -82,7 +82,7 @@ char *read_tcp_message(int fd);
  * @param fd the socket to read the message from
  * @return char* an heap allocated string that contains the message, NULL in case of failure
  */
-char *read_udp_message(int fd);
+char *read_udp_message(int fd, struct sockaddr* addr, socklen_t* addrlen);
 
 /**
  * @brief handles a message

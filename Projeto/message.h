@@ -2,6 +2,8 @@
 #define MESSAGES_H
 
 #include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 #define MESSAGE_BUFFER_SIZE 128
 
@@ -28,7 +30,7 @@ typedef struct message
 
 char *message_to_string(const message_t *message);
 
-message_t *string_to_message(char *string);
+message_t *string_to_message(char *string, struct sockaddr* sender_info, socklen_t* sender_info_len);
 
 message_t *create_message(const message_header header,const int key,const int message_id,const int i_key,const char i_ip[INET_ADDRSTRLEN], const char i_port[6]);
 
