@@ -452,6 +452,7 @@ void handle_message(message_t *message, node_t *node)
                 else
                 {
                     send_udp_message(create_message(EPRED, -1, -1, message->i_key, message->i_ip, message->i_port), node, node_data);
+                    destroy_node_data(node_data);
                 }
             }
         }
