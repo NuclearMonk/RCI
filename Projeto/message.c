@@ -120,8 +120,6 @@ message_t *string_to_message(char *string, struct sockaddr *sender_info, socklen
                 free(string);
                 if (getnameinfo(sender_info, *sender_info_len, buffer_ip, INET_ADDRSTRLEN, buffer_port, 6, 0) != 0)
                     return NULL;
-                printf("%s %s", buffer_ip, buffer_port);
-                fflush(stdout);
                 return create_message(EFND, buffer_argument, -1, -1, buffer_ip, buffer_port);
             }
             return NULL;
