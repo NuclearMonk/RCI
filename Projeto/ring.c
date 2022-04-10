@@ -270,7 +270,13 @@ char *read_udp_message(int fd, struct sockaddr *addr, socklen_t *addrlen)
             free(message);
             return NULL;
         }
-        sendto(fd, message_string, strlen(message_string) + 1, 0, addr, *addrlen);
+        int try_count =0;
+        int errorcode =0;
+        do
+        {
+             errorcode = sendto(fd, message_string, strlen(message_string) + 1, 0, addr, *addrlen); /* Do we really care to check if the ACK was sent properly */
+        }while(errorcode == -1 && (++try_count<3));
+
         free(message_string);
     }
     free(msg);
@@ -325,7 +331,10 @@ int send_tcp_message(message_t *message, node_t *node, node_data_t *destination)
     fflush(stdout);
     int length = strlen(message_string) + 1;
     int errorcode = write(fd, message_string, length);
-    shutdown(fd, SHUT_RDWR);
+    if(shutdown(fd, SHUT_RDWR)== -1)
+    {
+        errorcode = -1;
+    }
     close(fd);
     free(message_string);
     return errorcode;
