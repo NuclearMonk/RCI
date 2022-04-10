@@ -458,9 +458,12 @@ void handle_message(message_t *message, node_t *node)
         }
         break;
     case EFND:
-        node->wait_list = add_element(node->wait_list, node->message_id, 0, create_node_data(message->key, message->i_ip, message->i_port));
-        send_message(create_message(FND, message->key, node->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor->key);
-        node->message_id++;
+        if (node->sucessor)
+        {
+            node->wait_list = add_element(node->wait_list, node->message_id, 0, create_node_data(message->key, message->i_ip, message->i_port));
+            send_message(create_message(FND, message->key, node->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor->key);
+            node->message_id++;
+        }
         break;
     case EPRED:
         set_antecessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port));
