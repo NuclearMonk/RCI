@@ -274,7 +274,7 @@ char *read_udp_message(int fd, struct sockaddr *addr, socklen_t *addrlen)
         int errorcode =0;
         do
         {
-             errorcode = sendto(fd, message_string, strlen(message_string) + 1, 0, addr, *addrlen); /* Do we really care to check if the ACK was sent properly */
+             errorcode = sendto(fd, message_string, strlen(message_string), 0, addr, *addrlen); /* Do we really care to check if the ACK was sent properly */
         }while(errorcode == -1 && (++try_count<3));
 
         free(message_string);
@@ -380,7 +380,7 @@ int send_udp_message(message_t *message, node_t *node, node_data_t *destination)
     printf("MENSAGEM ENVIADA UDP\nDestino:%d\nContent:%s\n\n", destination->key, message_string);
     printf("\033[0m");
     fflush(stdout);
-    int length = strlen(message_string) + 1;
+    int length = strlen(message_string);
     errorcode = sendto(node->socket_udp, message_string, length, 0, res->ai_addr, res->ai_addrlen);
     freeaddrinfo(res);
     free(message_string);
