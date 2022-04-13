@@ -7,8 +7,6 @@
 #include "client.h"
 #include "message.h"
 
-#define MAX(A, B) ((A > B) ? A : B)
-
 void run_ring(int key, char *ip, char *port)
 {
     struct sigaction act = {.sa_handler = SIG_IGN};
@@ -19,7 +17,7 @@ void run_ring(int key, char *ip, char *port)
     if (!is_string_valid_port(port))
         exit(1);
 
-    fd_set set, temp_set;
+    fd_set temp_set;
     console_command_t *command;
     struct sockaddr sender_info;
     socklen_t sender_info_len = sizeof(sender_info);
@@ -31,15 +29,29 @@ void run_ring(int key, char *ip, char *port)
         exit(-1);
     }
 
-    FD_ZERO(&set);
-    FD_SET(0, &set);
-    FD_SET(node->socket_tcp, &set);
-    FD_SET(node->socket_udp, &set);
-
+    FD_ZERO(&(node->set));
+    FD_SET(0, &(node->set));
+    FD_SET(node->socket_tcp, &(node->set));
+    FD_SET(node->socket_udp, &(node->set));
+    node->max_fd = MAX(node->socket_tcp, node->socket_udp);
     while (1)
     {
-        temp_set = set;
-        int count = select(MAX(node->socket_tcp, node->socket_udp) + 1, &temp_set, NULL, NULL, NULL);
+        FD_ZERO(&(node->set));
+        FD_SET(0, &(node->set));
+        FD_SET(node->socket_tcp, &(node->set));
+        FD_SET(node->socket_udp, &(node->set));
+        if(node->antecessor && node->antecessor->fd > 0)
+        {
+            FD_SET(node->antecessor->fd, &(node->set));
+            node->max_fd = MAX(node->max_fd, node->antecessor->fd);
+        }
+        if(node->sucessor && node->antecessor->fd > 0)
+        {
+            FD_SET(node->sucessor->fd, &(node->set));
+            node->max_fd = MAX(node->max_fd, node->sucessor->fd);
+        }
+        temp_set = node->set;
+        int count = select(node->max_fd + 1, &temp_set, NULL, NULL, NULL);
         while (count > 0)
         {
             if (FD_ISSET(0, &temp_set))
@@ -54,19 +66,19 @@ void run_ring(int key, char *ip, char *port)
                         break;
                     case c_pentry:
                         leave_ring(node);
-                        set_antecessor_node(node, create_node_data(command->argument, command->ip, command->port));
+                        set_antecessor_node(node, create_node_data(command->argument, command->ip, command->port, -1));
                         break;
                     case c_bentry:
-                        enter_ring(node, create_node_data(command->argument,command->ip,command->port));
+                        enter_ring(node, create_node_data(command->argument, command->ip, command->port, -1));
                         break;
                     case c_chord:
-                        set_chord(node,create_node_data(command->argument,command->ip,command->port));
+                        set_chord(node, create_node_data(command->argument, command->ip, command->port, -1));
                         break;
                     case c_dchord:
                         remove_chord(node);
                         break;
                     case c_find:
-                        find_key(command->argument,node);
+                        find_key(command->argument, node);
                         break;
                     case c_show:
                         show_node_info(node);
@@ -87,20 +99,47 @@ void run_ring(int key, char *ip, char *port)
             }
             if (FD_ISSET(node->socket_tcp, &temp_set))
             {
-                message_t *message = string_to_message(read_tcp_message(node->socket_tcp,&sender_info,&sender_info_len),&sender_info,&sender_info_len);
+                int new_fd = -1;
+                message_t *message = string_to_message(read_tcp_message(node->socket_tcp, 1, &new_fd, &sender_info, &sender_info_len), &sender_info, &sender_info_len);
                 if (message)
                 {
-                    handle_message(message, node);
+                    handle_message(message, node, new_fd);
                     free(message);
                 }
             }
             if (FD_ISSET(node->socket_udp, &temp_set))
             {
-                message_t *message = string_to_message(read_udp_message(node->socket_udp,&sender_info,&sender_info_len),&sender_info,&sender_info_len);
+                message_t *message = string_to_message(read_udp_message(node->socket_udp, &sender_info, &sender_info_len), &sender_info, &sender_info_len);
                 if (message)
                 {
-                    handle_message(message, node);
+                    handle_message(message, node, -1);
                     free(message);
+                }
+            }
+            if (node->sucessor && node->sucessor->fd != -1)
+            {
+                if (FD_ISSET(node->sucessor->fd, &temp_set))
+                {
+                    int new_fd = -1;
+                    message_t *message = string_to_message(read_tcp_message(node->sucessor->fd, 0, &new_fd, &sender_info, &sender_info_len), &sender_info, &sender_info_len);
+                    if (message)
+                    {
+                        handle_message(message, node, new_fd);
+                        free(message);
+                    }
+                }
+            }
+            if (node->antecessor && node->antecessor->fd != -1)
+            {
+                if (FD_ISSET(node->antecessor->fd, &temp_set))
+                {
+                    int new_fd = -1;
+                    message_t *message = string_to_message(read_tcp_message(node->antecessor->fd, 0, &new_fd, &sender_info, &sender_info_len), &sender_info, &sender_info_len);
+                    if (message)
+                    {
+                        handle_message(message, node, new_fd);
+                        free(message);
+                    }
                 }
             }
             count--;

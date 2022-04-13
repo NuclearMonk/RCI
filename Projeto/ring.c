@@ -7,7 +7,7 @@
 #include <string.h>
 #include "client.h"
 
-int open_tcp_connection(const node_data_t *target);
+int open_tcp_connection(node_data_t *target);
 
 int bind_tcp_socket(int fd, const node_data_t *node);
 int bind_udp_socket(int fd, const node_data_t *node);
@@ -20,7 +20,7 @@ node_t *create_node(int key, const char *ip, const char *port)
     node_t *node = calloc(1, sizeof(node_t));
     if (!node)
         return NULL;
-    node->self = create_node_data(key, ip, port);
+    node->self = create_node_data(key, ip, port, -1);
     node->socket_tcp = socket(AF_INET, SOCK_STREAM, 0);
     int errorcode = bind_tcp_socket(node->socket_tcp, node->self);
     if (errorcode == -1)
@@ -59,8 +59,8 @@ void create_empty_ring(node_t *node)
 {
     destroy_node_data(node->sucessor);
     destroy_node_data(node->antecessor);
-    node->sucessor = create_node_data(node->self->key, node->self->ip, node->self->port);
-    node->antecessor = create_node_data(node->self->key, node->self->ip, node->self->port);
+    node->sucessor = create_node_data(node->self->key, node->self->ip, node->self->port, -1);
+    node->antecessor = create_node_data(node->self->key, node->self->ip, node->self->port, -1);
 }
 
 void leave_ring(node_t *node)
@@ -95,12 +95,15 @@ void show_node_info(const node_t *node)
     printf("KEY: %d\n", node->self->key);
     printf("IP: %s\n", node->self->ip);
     printf("PORT: %s\n", node->self->port);
+    printf("FD: %d\n", node->self->fd);
+
     if (node->antecessor)
     {
         printf("Antecessor node:\n");
         printf("KEY: %d\n", node->antecessor->key);
         printf("IP: %s\n", node->antecessor->ip);
         printf("PORT: %s\n", node->antecessor->port);
+        printf("FD: %d\n", node->antecessor->fd);
     }
     if (node->sucessor)
     {
@@ -108,6 +111,7 @@ void show_node_info(const node_t *node)
         printf("KEY: %d\n", node->sucessor->key);
         printf("IP: %s\n", node->sucessor->ip);
         printf("PORT: %s\n", node->sucessor->port);
+        printf("FD: %d\n", node->sucessor->fd);
     }
     if (node->chord)
     {
@@ -129,7 +133,7 @@ void set_sucessor_node(node_t *node, node_data_t *sucessor_node)
         {
             if (node->antecessor->key == node->sucessor->key && node->self->key == node->sucessor->key) /* if we  are our antecessor and predecessor then we need to set our antecessor too */
             {
-                set_antecessor_node(node, create_node_data(sucessor_node->key, sucessor_node->ip, sucessor_node->port));
+                set_antecessor_node(node, create_node_data(sucessor_node->key, sucessor_node->ip, sucessor_node->port, -1));
             }
         }
 
@@ -146,7 +150,7 @@ void set_antecessor_node(node_t *node, node_data_t *antecessor_node)
     {
         if (antecessor_node->key == node->self->key) /* if our antecessor is ourselves then we must also change our sucessor, as it will also be ourselves */
         {
-            set_sucessor_node(node, create_node_data(antecessor_node->key, antecessor_node->ip, antecessor_node->port));
+            set_sucessor_node(node, create_node_data(antecessor_node->key, antecessor_node->ip, antecessor_node->port, -1));
         }
         destroy_node_data(node->antecessor); /* we make sure we don't leak memory by destroying the existing antecessor */
     }
@@ -170,10 +174,12 @@ void remove_chord(node_t *node)
     node->chord = NULL;
 }
 
-int open_tcp_connection(const node_data_t *target)
+int open_tcp_connection(node_data_t *target)
 {
     if (!target)
         return -1;
+    if (target->fd != -1)
+        return target->fd;
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     struct addrinfo *res;
     struct addrinfo hints = {.ai_family = AF_INET, .ai_socktype = SOCK_STREAM};
@@ -185,7 +191,8 @@ int open_tcp_connection(const node_data_t *target)
     freeaddrinfo(res);
     if (errorcode == -1)
         return -1;
-    return fd;
+    target->fd = fd;
+    return target->fd;
 }
 
 int bind_tcp_socket(int fd, const node_data_t *node)
@@ -222,15 +229,27 @@ int bind_udp_socket(int fd, const node_data_t *node)
     return errorcode;
 }
 
-char *read_tcp_message(int fd, struct sockaddr *addr, socklen_t *addrlen)
+char *read_tcp_message(int fd, int should_accept, int *ret_fd, struct sockaddr *addr, socklen_t *addrlen)
 {
     // struct sockaddr addr;
     // socklen_t addrlen = sizeof(addr);
     char buffer[128] = "";
     int newfd, nread;
-    if ((newfd = accept(fd, addr, addrlen)) == -1)
-        return NULL;
-    if ((nread = read(newfd, &buffer, 128)) == -1)
+    if (should_accept)
+    {
+        if ((newfd = accept(fd, addr, addrlen)) == -1)
+        {
+
+            return NULL;
+        }
+        *ret_fd = newfd;
+    }
+    else
+    {
+        newfd = fd;
+    }
+
+    if ((nread = read(newfd, &buffer, 128)) <=0)
         return NULL;
     buffer[nread] = '\0';
     char *message = malloc((strlen(buffer) + 1) * sizeof(char));
@@ -241,9 +260,6 @@ char *read_tcp_message(int fd, struct sockaddr *addr, socklen_t *addrlen)
     printf("MENSAGEM RECEBIDA TCP\n%s\n", buffer);
     printf("\033[0m");
     fflush(stdout);
-
-    shutdown(newfd, SHUT_RDWR);
-    close(newfd);
     return message;
 }
 
@@ -270,12 +286,12 @@ char *read_udp_message(int fd, struct sockaddr *addr, socklen_t *addrlen)
             free(message);
             return NULL;
         }
-        int try_count =0;
-        int errorcode =0;
+        int try_count = 0;
+        int errorcode = 0;
         do
         {
-             errorcode = sendto(fd, message_string, strlen(message_string), 0, addr, *addrlen); /* Do we really care to check if the ACK was sent properly */
-        }while(errorcode == -1 && (++try_count<3));
+            errorcode = sendto(fd, message_string, strlen(message_string), 0, addr, *addrlen); /* Do we really care to check if the ACK was sent properly */
+        } while (errorcode == -1 && (++try_count < 3));
 
         free(message_string);
     }
@@ -311,7 +327,7 @@ int send_tcp_message(message_t *message, node_t *node, node_data_t *destination)
     {
         if (message->header == FND || message->header == RSP)
         {
-            handle_message(message, node);
+            handle_message(message, node, -1);
         }
         free(message);
         return 0;
@@ -322,20 +338,18 @@ int send_tcp_message(message_t *message, node_t *node, node_data_t *destination)
         free(message);
         return -1;
     }
+
+    FD_SET(fd, &(node->set));
+    node->max_fd = MAX(node->max_fd, fd);
     char *message_string = message_to_string(message);
     free(message);
     /* Debug Prints */
     printf("\033[0;32m");
-    printf("MENSAGEM ENVIADA TCP\nDestino:%d\nContent:%s\n\n", destination->key, message_string);
+    printf("MENSAGEM ENVIADA TCP\nDestino:%d VIA %d\nContent:%s\n\n", destination->key,fd, message_string);
     printf("\033[0m");
     fflush(stdout);
     int length = strlen(message_string) + 1;
     int errorcode = write(fd, message_string, length);
-    if(shutdown(fd, SHUT_RDWR)== -1)
-    {
-        errorcode = -1;
-    }
-    close(fd);
     free(message_string);
     return errorcode;
 }
@@ -358,7 +372,7 @@ int send_udp_message(message_t *message, node_t *node, node_data_t *destination)
     {
         if (message->header == FND || message->header == RSP)
         {
-            handle_message(message, node);
+            handle_message(message, node, -1);
         }
         free(message);
         return 0;
@@ -405,7 +419,7 @@ int send_message(message_t *message, node_t *node, int destination_key)
     return send_tcp_message(message, node, node->sucessor);
 }
 
-void handle_message(message_t *message, node_t *node)
+void handle_message(message_t *message, node_t *node, int sender_fd)
 {
     switch (message->header)
     {
@@ -418,12 +432,14 @@ void handle_message(message_t *message, node_t *node)
             }
         }
         send_tcp_message(create_message(PRED, -1, -1, message->i_key, message->i_ip, message->i_port), node, node->sucessor);
-        set_sucessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port));
+        set_sucessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port, sender_fd));
+        FD_SET(sender_fd, &(node->set));
+        node->max_fd = MAX(node->max_fd, sender_fd);
         break;
     case PRED:
         if (node->sucessor)
         {
-            set_antecessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port));
+            set_antecessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port, -1));
         }
         break;
     case FND:
@@ -469,13 +485,13 @@ void handle_message(message_t *message, node_t *node)
     case EFND:
         if (node->sucessor)
         {
-            node->wait_list = add_element(node->wait_list, node->message_id, 0, create_node_data(message->key, message->i_ip, message->i_port));
+            node->wait_list = add_element(node->wait_list, node->message_id, 0, create_node_data(message->key, message->i_ip, message->i_port, -1));
             send_message(create_message(FND, message->key, node->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor->key);
             node->message_id++;
         }
         break;
     case EPRED:
-        set_antecessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port));
+        set_antecessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port, -1));
         break;
     case ACK:
         break;

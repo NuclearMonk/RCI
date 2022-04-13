@@ -4,7 +4,7 @@
 #include "node_data.h"
 #include "message.h"
 #include "wait_list.h"
-
+#define MAX(A, B) ((A > B) ? A : B)
 #define MAX_KEY 32
 typedef struct node
 {
@@ -16,6 +16,8 @@ typedef struct node
     int message_id;
     int socket_tcp;
     int socket_udp;
+    int max_fd;
+    fd_set set;
 } node_t;
 
 /**
@@ -74,7 +76,7 @@ void show_node_info(const node_t *node);
  * @param fd the socket to read the message from
  * @return char* an heap allocated string that contains the message, NULL in case of failure
  */
-char *read_tcp_message(int fd, struct sockaddr* addr, socklen_t* addrlen);
+char *read_tcp_message(int fd, int should_accept, int *ret_fd, struct sockaddr *addr, socklen_t *addrlen);
 
 /**
  * @brief reads a message UDP message on socket fd
@@ -90,7 +92,7 @@ char *read_udp_message(int fd, struct sockaddr* addr, socklen_t* addrlen);
  * @param message the message
  * @param self  always self 
  */
-void handle_message(message_t *message, node_t *self);
+void handle_message(message_t *message, node_t *self, int sender_fd);
 
 void enter_ring(node_t* node, node_data_t* existing_member);
 
