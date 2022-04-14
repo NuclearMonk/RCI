@@ -16,8 +16,6 @@ void run_ring(int key, char *ip, char *port)
         exit(-1);
     if (!is_string_valid_port(port))
         exit(1);
-
-    fd_set temp_set;
     console_command_t *command;
     struct sockaddr sender_info;
     socklen_t sender_info_len = sizeof(sender_info);
@@ -40,21 +38,20 @@ void run_ring(int key, char *ip, char *port)
         FD_SET(0, &(node->set));
         FD_SET(node->socket_tcp, &(node->set));
         FD_SET(node->socket_udp, &(node->set));
-        if(node->antecessor && node->antecessor->fd > 0)
+        if (node->antecessor && node->antecessor->fd > 0)
         {
             FD_SET(node->antecessor->fd, &(node->set));
             node->max_fd = MAX(node->max_fd, node->antecessor->fd);
         }
-        if(node->sucessor && node->antecessor->fd > 0)
+        if (node->sucessor && node->sucessor->fd > 0)
         {
             FD_SET(node->sucessor->fd, &(node->set));
             node->max_fd = MAX(node->max_fd, node->sucessor->fd);
         }
-        temp_set = node->set;
-        int count = select(node->max_fd + 1, &temp_set, NULL, NULL, NULL);
+        int count = select(node->max_fd + 1, (&node->set), NULL, NULL, NULL);
         while (count > 0)
         {
-            if (FD_ISSET(0, &temp_set))
+            if (FD_ISSET(0, (&node->set)))
             {
                 command = read_console_command(0);
                 if (command)
@@ -97,7 +94,7 @@ void run_ring(int key, char *ip, char *port)
                     free(command);
                 }
             }
-            if (FD_ISSET(node->socket_tcp, &temp_set))
+            if (FD_ISSET(node->socket_tcp, (&node->set)))
             {
                 int new_fd = -1;
                 message_t *message = string_to_message(read_tcp_message(node->socket_tcp, 1, &new_fd, &sender_info, &sender_info_len), &sender_info, &sender_info_len);
@@ -106,8 +103,9 @@ void run_ring(int key, char *ip, char *port)
                     handle_message(message, node, new_fd);
                     free(message);
                 }
+                break;
             }
-            if (FD_ISSET(node->socket_udp, &temp_set))
+            if (FD_ISSET(node->socket_udp, (&node->set)))
             {
                 message_t *message = string_to_message(read_udp_message(node->socket_udp, &sender_info, &sender_info_len), &sender_info, &sender_info_len);
                 if (message)
@@ -115,10 +113,11 @@ void run_ring(int key, char *ip, char *port)
                     handle_message(message, node, -1);
                     free(message);
                 }
+                break;
             }
-            if (node->sucessor && node->sucessor->fd != -1)
+            if ((node->sucessor != NULL) && (node->sucessor->fd != -1))
             {
-                if (FD_ISSET(node->sucessor->fd, &temp_set))
+                if (FD_ISSET(node->sucessor->fd, (&node->set)))
                 {
                     int new_fd = -1;
                     message_t *message = string_to_message(read_tcp_message(node->sucessor->fd, 0, &new_fd, &sender_info, &sender_info_len), &sender_info, &sender_info_len);
@@ -127,11 +126,12 @@ void run_ring(int key, char *ip, char *port)
                         handle_message(message, node, new_fd);
                         free(message);
                     }
+                    break;
                 }
             }
-            if (node->antecessor && node->antecessor->fd != -1)
+            if ((node->antecessor != NULL) && (node->antecessor->fd != -1))
             {
-                if (FD_ISSET(node->antecessor->fd, &temp_set))
+                if (FD_ISSET(node->antecessor->fd, (&node->set)))
                 {
                     int new_fd = -1;
                     message_t *message = string_to_message(read_tcp_message(node->antecessor->fd, 0, &new_fd, &sender_info, &sender_info_len), &sender_info, &sender_info_len);
@@ -140,6 +140,7 @@ void run_ring(int key, char *ip, char *port)
                         handle_message(message, node, new_fd);
                         free(message);
                     }
+                    break;
                 }
             }
             count--;
