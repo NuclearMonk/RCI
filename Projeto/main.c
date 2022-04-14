@@ -97,7 +97,7 @@ void run_ring(int key, char *ip, char *port)
             if (FD_ISSET(node->socket_tcp, (&node->set)))
             {
                 int new_fd = -1;
-                message_t *message = string_to_message(read_tcp_message(node->socket_tcp, 1, &new_fd, &sender_info, &sender_info_len), &sender_info, &sender_info_len);
+                message_t *message = string_to_message(read_tcp_message(node->socket_tcp, 1, &new_fd, &sender_info, &sender_info_len), &sender_info);
                 if (message)
                 {
                     handle_message(message, node, new_fd);
@@ -107,7 +107,7 @@ void run_ring(int key, char *ip, char *port)
             }
             if (FD_ISSET(node->socket_udp, (&node->set)))
             {
-                message_t *message = string_to_message(read_udp_message(node->socket_udp, &sender_info, &sender_info_len), &sender_info, &sender_info_len);
+                message_t *message = string_to_message(read_udp_message(node->socket_udp, &sender_info, &sender_info_len), &sender_info);
                 if (message)
                 {
                     handle_message(message, node, -1);
@@ -120,7 +120,7 @@ void run_ring(int key, char *ip, char *port)
                 if (FD_ISSET(node->sucessor->fd, (&node->set)))
                 {
                     int new_fd = -1;
-                    message_t *message = string_to_message(read_tcp_message(node->sucessor->fd, 0, &new_fd, &sender_info, &sender_info_len), &sender_info, &sender_info_len);
+                    message_t *message = string_to_message(read_tcp_message(node->sucessor->fd, 0, &new_fd, &sender_info, &sender_info_len), &sender_info);
                     if (message)
                     {
                         handle_message(message, node, new_fd);
@@ -134,7 +134,7 @@ void run_ring(int key, char *ip, char *port)
                 if (FD_ISSET(node->antecessor->fd, (&node->set)))
                 {
                     int new_fd = -1;
-                    message_t *message = string_to_message(read_tcp_message(node->antecessor->fd, 0, &new_fd, &sender_info, &sender_info_len), &sender_info, &sender_info_len);
+                    message_t *message = string_to_message(read_tcp_message(node->antecessor->fd, 0, &new_fd, &sender_info, &sender_info_len), &sender_info);
                     if (message)
                     {
                         handle_message(message, node, new_fd);

@@ -47,7 +47,7 @@ char *message_to_string(const message_t *message)
     }
 }
 
-message_t *string_to_message(char *string, struct sockaddr *sender_info, socklen_t *sender_info_len)
+message_t *string_to_message(char *string, struct sockaddr *sender_info)
 {
     if (!string)
     {
@@ -118,8 +118,12 @@ message_t *string_to_message(char *string, struct sockaddr *sender_info, socklen
             if (sscanf(string, "%*s %d", &buffer_argument) == 1)
             {
                 free(string);
-                if (getnameinfo(sender_info, *sender_info_len, buffer_ip, INET_ADDRSTRLEN, buffer_port, 6, 0) != 0)
+                int port;
+                struct sockaddr_in *temp = (struct sockaddr_in *)sender_info;
+                if (inet_ntop(AF_INET, &(temp->sin_addr), buffer_ip, INET_ADDRSTRLEN) == NULL)
                     return NULL;
+                port = htons(temp->sin_port);
+                sprintf(buffer_port, "%5d", port);
                 return create_message(EFND, buffer_argument, -1, -1, buffer_ip, buffer_port);
             }
             return NULL;

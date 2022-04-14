@@ -125,19 +125,6 @@ void set_sucessor_node(node_t *node, node_data_t *sucessor_node)
 {
     if (!node || !sucessor_node) /* null checking */
         return;
-    // if (node->sucessor)
-    // {
-    //     if (node->antecessor)
-    //     {
-    //         if (node->antecessor->key == node->sucessor->key && node->self->key == node->sucessor->key) /* if we  are our antecessor and predecessor then we need to set our antecessor too */
-    //         {
-    //             set_antecessor_node(node, create_node_data(sucessor_node->key, sucessor_node->ip, sucessor_node->port, -1));
-    //         }
-    //     }
-
-    //     destroy_node_data(node->sucessor);
-    // }
-    // node->sucessor = sucessor_node;
     destroy_node_data(node->sucessor);
     node->sucessor = sucessor_node;
 }
@@ -146,20 +133,6 @@ void set_antecessor_node(node_t *node, node_data_t *antecessor_node)
 {
     if (!node || !antecessor_node) /* null checks */
         return;
-    // if (node->antecessor) /* if we have an antecessor */
-    // {
-    //     if (antecessor_node->key == node->self->key) /* if our antecessor is ourselves then we must also change our sucessor, as it will also be ourselves */
-    //     {
-    //         set_sucessor_node(node, create_node_data(antecessor_node->key, antecessor_node->ip, antecessor_node->port, -1));
-    //     }
-    //     destroy_node_data(node->antecessor); /* we make sure we don't leak memory by destroying the existing antecessor */
-    // }
-
-    // if (send_tcp_message(create_message(SELF, -1, -1, node->self->key, node->self->ip, node->self->port), node, antecessor_node) != -1)
-    // {
-    //     node->antecessor = antecessor_node;
-    //}
-
     if (send_tcp_message(create_message(SELF, -1, -1, node->self->key, node->self->ip, node->self->port), node, antecessor_node) != -1)
     {
         destroy_node_data(node->antecessor);
@@ -280,7 +253,12 @@ char *read_udp_message(int fd, struct sockaddr *addr, socklen_t *addrlen)
     if (!message)
         return NULL;
     strcpy(message, buffer);
-    message_t *msg = string_to_message(message, addr, addrlen);
+    message_t *msg = string_to_message(message, addr);
+    if (msg == NULL)
+    {
+        free(message);
+        return NULL;
+    }
     if (msg->header != ACK)
     {
         message_t *msg_2 = create_message(ACK, 0, 0, 0, NULL, NULL);
@@ -399,7 +377,7 @@ int send_udp_message(message_t *message, node_t *node, node_data_t *destination)
         errorcode = sendto(node->socket_udp, message_string, length, 0, res->ai_addr, res->ai_addrlen);
         /* Debug Prints */
         printf("\033[0;32m");
-        printf("MENSAGEM ENVIADA UDP\nDestino:%d\nContent:%s\n\n", destination->key, message_string);
+        printf("MENSAGEM ENVIADA UDP\nDestino:%d %s %s\nContent:%s\n\n", destination->key, destination->ip, destination->port, message_string);
         printf("\033[0m");
         fflush(stdout);
         FD_ZERO(&set);
@@ -411,8 +389,8 @@ int send_udp_message(message_t *message, node_t *node, node_data_t *destination)
         if (select(node->socket_udp + 1, &set, NULL, NULL, &timeout) > 0)
         {
 
-            read_udp_message(node->socket_udp, &addr, &addr_len);
-
+            char *ack = read_udp_message(node->socket_udp, &addr, &addr_len);
+            free(ack);
             break;
         }
         printf("Failed To Receive ACK... Retrying\n");
@@ -447,17 +425,6 @@ void handle_message(message_t *message, node_t *node, int sender_fd)
     switch (message->header)
     {
     case SELF:
-        // if (node->sucessor)
-        // {
-        //     if (message->i_key == node->sucessor->key)
-        //     {
-        //         return;
-        //     }
-        // }
-        // send_tcp_message(create_message(PRED, -1, -1, message->i_key, message->i_ip, message->i_port), node, node->sucessor);
-        // set_sucessor_node(node, create_node_data(message->i_key, message->i_ip, message->i_port, sender_fd));
-        // FD_SET(sender_fd, &(node->set));
-        // node->max_fd = MAX(node->max_fd, sender_fd);
         if (node->sucessor)
         {
             if (calculate_distance(node->self->key, message->i_key) <= calculate_distance(node->sucessor->key, message->i_key))
