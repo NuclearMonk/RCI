@@ -491,9 +491,7 @@ void handle_message(message_t *message, node_t *node, int sender_fd)
     case RSP:
         if (node->sucessor)
         {
-            if (!(calculate_distance(node->self->key, message->key) < calculate_distance(node->sucessor->key, message->key)) && node->self->key != node->sucessor->key)
-                send_message(copy_message(message), node, message->i_key);
-            else
+            if (calculate_distance(node->self->key, message->key) <= calculate_distance(node->sucessor->key, message->key) || (message->key == node->self->key))
             {
                 node_data_t *node_data;
                 int is_find;
@@ -511,6 +509,10 @@ void handle_message(message_t *message, node_t *node, int sender_fd)
                     destroy_node_data(node_data);
                 }
             }
+            else
+            {
+                send_message(copy_message(message), node, message->i_key);
+            }
         }
         break;
     case EFND:
@@ -518,7 +520,7 @@ void handle_message(message_t *message, node_t *node, int sender_fd)
         {
             node->wait_list = add_element(node->wait_list, node->message_id, 0, create_node_data(message->key, message->i_ip, message->i_port, -1));
             send_message(create_message(FND, message->key, node->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor->key);
-            node->message_id = node->message_id+1;
+            node->message_id = node->message_id + 1;
             node->message_id = node->message_id % 100;
         }
         break;
@@ -536,7 +538,7 @@ void find_key(int key, node_t *node)
 {
     node->wait_list = add_element(node->wait_list, node->message_id, 1, NULL);
     send_message(create_message(FND, key, node->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor->key);
-    node->message_id = (node->message_id)+1;
+    node->message_id = (node->message_id) + 1;
     node->message_id = (node->message_id) % 100;
 }
 
@@ -548,5 +550,5 @@ void enter_ring(node_t *node, node_data_t *existing_member)
 
 int calculate_distance(int start, int end)
 {
-    return abs((end - start) % MAX_KEY);
+    return (end - start) % MAX_KEY;
 }

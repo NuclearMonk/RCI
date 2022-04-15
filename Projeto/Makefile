@@ -1,5 +1,5 @@
 CC = gcc
-flags = -std=gnu99 -g -O3 -Wall -Wextra -Werror=pedantic -Werror=format=2 -pedantic-errors -Wno-unknown-pragmas
+flags = -Wall
 ofiles = client.o  ring.o node_data.o main.o message.o wait_list.o
 testofiles = node_data.o wait_list.o
 
