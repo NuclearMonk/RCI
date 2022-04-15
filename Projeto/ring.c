@@ -518,7 +518,8 @@ void handle_message(message_t *message, node_t *node, int sender_fd)
         {
             node->wait_list = add_element(node->wait_list, node->message_id, 0, create_node_data(message->key, message->i_ip, message->i_port, -1));
             send_message(create_message(FND, message->key, node->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor->key);
-            node->message_id = ++node->message_id % 100;
+            node->message_id = node->message_id+1;
+            node->message_id = node->message_id % 100;
         }
         break;
     case EPRED:
@@ -535,7 +536,8 @@ void find_key(int key, node_t *node)
 {
     node->wait_list = add_element(node->wait_list, node->message_id, 1, NULL);
     send_message(create_message(FND, key, node->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor->key);
-    node->message_id = ++node->message_id % 100;
+    node->message_id = (node->message_id)+1;
+    node->message_id = (node->message_id) % 100;
 }
 
 void enter_ring(node_t *node, node_data_t *existing_member)
