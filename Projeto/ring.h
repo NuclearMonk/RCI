@@ -60,7 +60,19 @@ void set_sucessor_node(node_t *node, node_data_t *sucessor_node);
  */
 void set_antecessor_node(node_t *node, node_data_t *antecessor_node);
 
+/**
+ * @brief Sets the chord node for node
+ * 
+ * @param node 
+ * @param chord_node 
+ */
 void set_chord(node_t* node, node_data_t* chord_node);
+
+/**
+ * @brief removes the chord from a given node if it has one
+ * 
+ * @param node 
+ */
 void remove_chord(node_t* node);
 
 /**
@@ -94,10 +106,31 @@ char *read_udp_message(int fd, struct sockaddr* addr, socklen_t* addrlen);
  */
 void handle_message(message_t *message, node_t *self, int sender_fd);
 
+
+/**
+ * @brief enters an existing ring using EFND
+ * 
+ * @param node 
+ * @param existing_member 
+ */
 void enter_ring(node_t* node, node_data_t* existing_member);
 
+
+/**
+ * @brief starts a search for a given key using FND
+ * 
+ * @param key 
+ * @param node 
+ */
 void find_key(int key, node_t* node);
 
+/**
+ * @brief calculates the distance between start and end
+ * 
+ * @param start 
+ * @param end 
+ * @return int 
+ */
 int calculate_distance(int start, int end);
 
 #endif

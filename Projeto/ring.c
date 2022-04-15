@@ -153,6 +153,12 @@ void remove_chord(node_t *node)
     node->chord = NULL;
 }
 
+/**
+ * @brief opens a tcp connection to the target, if the target already has a fd provided returns the existing one
+ * 
+ * @param target 
+ * @return int 
+ */
 int open_tcp_connection(node_data_t *target)
 {
     if (!target)
@@ -174,6 +180,13 @@ int open_tcp_connection(node_data_t *target)
     return target->fd;
 }
 
+/**
+ * @brief binds the fd for listening to TCP traffic
+ * 
+ * @param fd 
+ * @param node 
+ * @return int 
+ */
 int bind_tcp_socket(int fd, const node_data_t *node)
 {
     struct addrinfo *res;
@@ -190,7 +203,13 @@ int bind_tcp_socket(int fd, const node_data_t *node)
         return -1;
     return listen(fd, 5);
 }
-
+/**
+ * @brief binds the fd for for listening for UDP traffic
+ * 
+ * @param fd 
+ * @param node 
+ * @return int 
+ */
 int bind_udp_socket(int fd, const node_data_t *node)
 {
     struct addrinfo *res;
@@ -293,7 +312,7 @@ char *read_udp_message(int fd, struct sockaddr *addr, socklen_t *addrlen)
 
 /**
  * @brief sends a message to the destination node using the TCP protocol
- *
+ * has the side effect of freeing message
  * @param message the message
  * @param destination the recipient of the message
  * @return int, 1 on case of success, -1 otherwise
@@ -337,6 +356,7 @@ int send_tcp_message(message_t *message, node_t *node, node_data_t *destination)
 
 /**
  * @brief sends a message to the destination node using the UDP protocol
+ * has the side effect of freeing message
  *
  * @param message the message
  * @param destination the recipient of the message
@@ -402,6 +422,15 @@ int send_udp_message(message_t *message, node_t *node, node_data_t *destination)
     return errorcode;
 }
 
+/**
+ * @brief sends a message to the destination key taking chords into account
+ * has the side effect of freeing the message
+ * 
+ * @param message 
+ * @param node 
+ * @param destination_key 
+ * @return int 
+ */
 int send_message(message_t *message, node_t *node, int destination_key)
 {
     if (!node || !node->sucessor)
@@ -489,7 +518,7 @@ void handle_message(message_t *message, node_t *node, int sender_fd)
         {
             node->wait_list = add_element(node->wait_list, node->message_id, 0, create_node_data(message->key, message->i_ip, message->i_port, -1));
             send_message(create_message(FND, message->key, node->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor->key);
-            node->message_id++;
+            node->message_id = ++node->message_id % 100;
         }
         break;
     case EPRED:
@@ -506,7 +535,7 @@ void find_key(int key, node_t *node)
 {
     node->wait_list = add_element(node->wait_list, node->message_id, 1, NULL);
     send_message(create_message(FND, key, node->message_id, node->self->key, node->self->ip, node->self->port), node, node->sucessor->key);
-    node->message_id++;
+    node->message_id = ++node->message_id % 100;
 }
 
 void enter_ring(node_t *node, node_data_t *existing_member)
