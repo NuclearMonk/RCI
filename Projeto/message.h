@@ -33,7 +33,7 @@ typedef struct message
 } message_t;
 
 /**
- * @brief convers a message to it's string equvalent
+ * @brief convers a message to it's string equivalent
  *
  * @param message
  * @return char*

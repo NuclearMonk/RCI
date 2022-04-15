@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 
-node_data_t *create_node_data(int key, const char ip[INET_ADDRSTRLEN], const char port[6],int fd)
+node_data_t *create_node_data(int key, const char ip[INET_ADDRSTRLEN], const char port[6], int fd)
 {
     node_data_t *node = malloc(sizeof(node_data_t));
     node->key = key;
@@ -17,9 +17,9 @@ void destroy_node_data(node_data_t *node)
 {
     if (!node)
         return;
-    if(node->fd !=-1)
+    if (node->fd != -1)
     {
-        shutdown(node->fd,SHUT_RDWR);
+        shutdown(node->fd, SHUT_RDWR);
         close(node->fd);
     }
     free(node);

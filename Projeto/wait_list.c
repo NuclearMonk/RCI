@@ -1,8 +1,7 @@
 #include "wait_list.h"
 #include <stdlib.h>
 
-
-wait_list_t *add_element(wait_list_t *list, int message_id,int is_find, node_data_t *node_data)
+wait_list_t *add_element(wait_list_t *list, int message_id, int is_find, node_data_t *node_data)
 {
     wait_list_t *new_element = malloc(sizeof(wait_list_t));
     new_element->message_id = message_id;
@@ -12,7 +11,7 @@ wait_list_t *add_element(wait_list_t *list, int message_id,int is_find, node_dat
     return new_element;
 }
 
-wait_list_t *find_and_pop_element(wait_list_t *list, int message_id,int* is_find, node_data_t **node_data)
+wait_list_t *find_and_pop_element(wait_list_t *list, int message_id, int *is_find, node_data_t **node_data)
 {
     wait_list_t *next, *previous = NULL;
     for (wait_list_t *element = list; element != NULL; previous = element, element = next)
@@ -40,7 +39,8 @@ wait_list_t *find_and_pop_element(wait_list_t *list, int message_id,int* is_find
 
 void destroy_list(wait_list_t *list)
 {
-    if(!list)return;
+    if (!list)
+        return;
     wait_list_t *next;
     for (wait_list_t *element = list; element != NULL; element = next)
     {

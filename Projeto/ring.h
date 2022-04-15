@@ -62,18 +62,18 @@ void set_antecessor_node(node_t *node, node_data_t *antecessor_node);
 
 /**
  * @brief Sets the chord node for node
- * 
- * @param node 
- * @param chord_node 
+ *
+ * @param node
+ * @param chord_node
  */
-void set_chord(node_t* node, node_data_t* chord_node);
+void set_chord(node_t *node, node_data_t *chord_node);
 
 /**
  * @brief removes the chord from a given node if it has one
- * 
- * @param node 
+ *
+ * @param node
  */
-void remove_chord(node_t* node);
+void remove_chord(node_t *node);
 
 /**
  * @brief print this nodes info to the console
@@ -96,40 +96,38 @@ char *read_tcp_message(int fd, int should_accept, int *ret_fd, struct sockaddr *
  * @param fd the socket to read the message from
  * @return char* an heap allocated string that contains the message, NULL in case of failure
  */
-char *read_udp_message(int fd, struct sockaddr* addr, socklen_t* addrlen);
+char *read_udp_message(int fd, struct sockaddr *addr, socklen_t *addrlen);
 
 /**
  * @brief handles a message
- * 
+ *
  * @param message the message
- * @param self  always self 
+ * @param self  always self
  */
 void handle_message(message_t *message, node_t *self, int sender_fd);
 
-
 /**
  * @brief enters an existing ring using EFND
- * 
- * @param node 
- * @param existing_member 
+ *
+ * @param node
+ * @param existing_member
  */
-void enter_ring(node_t* node, node_data_t* existing_member);
-
+void enter_ring(node_t *node, node_data_t *existing_member);
 
 /**
  * @brief starts a search for a given key using FND
- * 
- * @param key 
- * @param node 
+ *
+ * @param key
+ * @param node
  */
-void find_key(int key, node_t* node);
+void find_key(int key, node_t *node);
 
 /**
  * @brief calculates the distance between start and end
- * 
- * @param start 
- * @param end 
- * @return int 
+ *
+ * @param start
+ * @param end
+ * @return int
  */
 int calculate_distance(int start, int end);
 

@@ -155,9 +155,9 @@ void remove_chord(node_t *node)
 
 /**
  * @brief opens a tcp connection to the target, if the target already has a fd provided returns the existing one
- * 
- * @param target 
- * @return int 
+ *
+ * @param target
+ * @return int
  */
 int open_tcp_connection(node_data_t *target)
 {
@@ -182,10 +182,10 @@ int open_tcp_connection(node_data_t *target)
 
 /**
  * @brief binds the fd for listening to TCP traffic
- * 
- * @param fd 
- * @param node 
- * @return int 
+ *
+ * @param fd
+ * @param node
+ * @return int
  */
 int bind_tcp_socket(int fd, const node_data_t *node)
 {
@@ -205,10 +205,10 @@ int bind_tcp_socket(int fd, const node_data_t *node)
 }
 /**
  * @brief binds the fd for for listening for UDP traffic
- * 
- * @param fd 
- * @param node 
- * @return int 
+ *
+ * @param fd
+ * @param node
+ * @return int
  */
 int bind_udp_socket(int fd, const node_data_t *node)
 {
@@ -425,11 +425,11 @@ int send_udp_message(message_t *message, node_t *node, node_data_t *destination)
 /**
  * @brief sends a message to the destination key taking chords into account
  * has the side effect of freeing the message
- * 
- * @param message 
- * @param node 
- * @param destination_key 
- * @return int 
+ *
+ * @param message
+ * @param node
+ * @param destination_key
+ * @return int
  */
 int send_message(message_t *message, node_t *node, int destination_key)
 {

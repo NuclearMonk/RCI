@@ -39,14 +39,13 @@ console_command_t *read_console_command(int fd);
  *
  * @return bool wether or not the arg is convertible to a valid ip address
  */
-bool is_string_valid_ip(const char* candidate);
-
+bool is_string_valid_ip(const char *candidate);
 
 /**
  * @brief Takes in a string and evaluates wether or not it is a valid port
- * 
+ *
  * @return bool wether or not the arg is a valid port
  */
-bool is_string_valid_port(const char* candidate);
+bool is_string_valid_port(const char *candidate);
 
 #endif
