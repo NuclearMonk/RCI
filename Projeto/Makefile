@@ -1,5 +1,5 @@
 CC = gcc
-flags = -Wall
+flags = -Wall -g
 ofiles = client.o  ring.o node_data.o main.o message.o wait_list.o
 testofiles = node_data.o wait_list.o
 

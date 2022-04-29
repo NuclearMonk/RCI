@@ -491,7 +491,7 @@ void handle_message(message_t *message, node_t *node, int sender_fd)
     case RSP:
         if (node->sucessor)
         {
-            if (calculate_distance(node->self->key, message->key) <= calculate_distance(node->sucessor->key, message->key) || (message->key == node->self->key))
+            if ((message->key == node->self->key))
             {
                 node_data_t *node_data;
                 int is_find;
@@ -503,7 +503,7 @@ void handle_message(message_t *message, node_t *node, int sender_fd)
                     printf("IP:%s\n", message->i_ip);
                     printf("port:%s\n", message->i_port);
                 }
-                else
+                else if(node_data != NULL)
                 {
                     send_udp_message(create_message(EPRED, -1, -1, message->i_key, message->i_ip, message->i_port), node, node_data);
                     destroy_node_data(node_data);
